@@ -71,17 +71,32 @@ class EEGDataReceiver:
         # 不再清空串口缓冲区，避免误删正常数据
         self.max_consecutive_errors = 1000000
         
-    def calculate_crc16_nrf(self, data: bytes):
-        """计算CRC16校验码"""
-        crc = 0xFFFF
+        # 初始化CRC表
+        self._init_crc_table()
+        
+    def _init_crc_table(self):
+        """初始化CRC16查表"""
+        self._crc_table = [0] * 256
         poly = 0x1021
-        for byte in data:
-            crc ^= (byte << 8)
+        for i in range(256):
+            crc = i << 8
             for _ in range(8):
                 if crc & 0x8000:
-                    crc = ((crc << 1) ^ poly) & 0xFFFF
+                    crc = (crc << 1) ^ poly
                 else:
-                    crc = (crc << 1) & 0xFFFF
+                    crc <<= 1
+            self._crc_table[i] = crc & 0xFFFF
+    
+    def calculate_crc16_nrf(self, data: bytes):
+        """
+        计算CRC16校验码 (CRC-16/CCITT-FALSE)
+        使用查表法，与NRF52代码完全一致
+        """
+        # 计算CRC
+        crc = 0xFFFF  # 初始值
+        for byte in data:
+            idx = ((crc >> 8) ^ byte) & 0xFF
+            crc = ((crc << 8) ^ self._crc_table[idx]) & 0xFFFF
         return crc
     
     def start(self):
@@ -119,106 +134,135 @@ class EEGDataReceiver:
         print("[EEG] 接收器已停止")
     
     def _receive_loop(self):
-        """接收数据循环"""
+        """接收数据循环 - 实时处理数据包"""
         print("[EEG] 接收循环已启动")
         
         buffer = b''
         while self.running:
             try:
-                # 读取串口可用数据
+                # 1. 读取数据
                 if self.ser.in_waiting:
                     buffer += self.ser.read(self.ser.in_waiting)
                 
-                # 至少需要头+类型3字节
-                if len(buffer) < 3:
-                    time.sleep(0.001)
-                    continue
-                
-                # 校验包头 0x06 0x09
-                if buffer[0] != 0x06 or buffer[1] != 0x09:
-                    buffer = buffer[1:]
-                    continue
-                
-                pkt_type = buffer[2]
-                if pkt_type == 0x01:
-                    target_len = 10
-                elif pkt_type == 0x02:
-                    target_len = 18
-                else:
-                    # 未知类型，跳过头部
-                    buffer = buffer[2:]
-                    continue
-                
-                # 长度不足，等待更多数据
-                if len(buffer) < target_len:
-                    time.sleep(0.001)
-                    continue
-                
-                frame = buffer[:target_len]
-                buffer = buffer[target_len:]
-                
-                # CRC 校验（最后2字节为大端 CRC）
-                data_to_check = frame[:-2]
-                local_crc = self.calculate_crc16_nrf(data_to_check)
-                recv_crc = struct.unpack('>H', frame[-2:])[0]
-                
-                if local_crc != recv_crc:
-                    self.stats['invalid_packets'] += 1
-                    self.consecutive_errors += 1
-                    # CRC 错，丢弃一个字节尝试重新同步
-                    buffer = frame[1:] + buffer
-                    continue
-                
-                # 解析通道号
-                ch = int(frame[3])
-                if ch < 1 or ch > 3:
-                    self.stats['invalid_packets'] += 1
-                    continue
-                
-                if pkt_type == 0x01:
-                    raw_val = struct.unpack('<f', frame[4:8])[0]
-                    if not is_valid_float(raw_val):
+                # 2. 循环解析 (至少需要 Header(2) + Type(1) = 3 字节)
+                while len(buffer) >= 3:
+                    
+                    # --- A. 校验包头 0x06 0x09 ---
+                    if buffer[0] != 0x06 or buffer[1] != 0x09:
+                        # 如果头不对，丢弃第一个字节，继续找
+                        buffer = buffer[1:]
+                        continue
+                    
+                    # --- B. 获取包类型 ---
+                    pkt_type = buffer[2]
+                    target_len = 0
+                    
+                    if pkt_type == 0x01:    # 波形包
+                        # Header(2) + Type(1) + ID(1) + Data(4) + CRC(2) = 10
+                        target_len = 10
+                    elif pkt_type == 0x02:  # 特征包
+                        # Header(2) + Type(1) + ID(1) + Theta(4) + Alpha(4) + Beta(4) + CRC(2) = 18
+                        target_len = 18
+                    else:
+                        # 未知类型，跳过头（可能是假头）
+                        buffer = buffer[2:]
+                        continue
+                    
+                    # --- C. 检查长度是否足够 ---
+                    if len(buffer) < target_len:
+                        break  # 数据不够，退出循环等待更多数据
+                    
+                    # --- D. 提取完整一帧 ---
+                    frame = buffer[:target_len]
+                    
+                    # --- E. CRC 校验 ---
+                    # 参与校验的数据是除了最后2字节CRC之外的所有数据
+                    data_to_check = frame[:-2]
+                    calc_crc = self.calculate_crc16_nrf(data_to_check)
+                    
+                    # 提取接收到的CRC (大端序: 高字节在前)
+                    recv_crc = (frame[-2] << 8) | frame[-1]
+                    
+                    if calc_crc != recv_crc:
+                        # CRC校验失败，可能是假头，丢弃1字节重试
+                        self.stats['invalid_packets'] += 1
+                        # 仅在首次或每100次错误时打印，避免刷屏
+                        if self.stats['invalid_packets'] <= 3 or self.stats['invalid_packets'] % 100 == 0:
+                            print(f"[EEG] CRC错误: 计算={calc_crc:04X}, 接收={recv_crc:04X}, 包类型={pkt_type}, 帧前4字节={frame[:4].hex()}")
+                        buffer = buffer[1:]
+                        continue
+                    
+                    # === CRC校验通过，开始解析 ===
+                    # 移除已处理的一帧
+                    buffer = buffer[target_len:]
+                    
+                    # 解析通道号 (frame[3]位置)
+                    ch_id = int(frame[3])
+                    if ch_id < 1 or ch_id > 3:
                         self.stats['invalid_packets'] += 1
                         continue
                     
-                    with self.lock:
-                        self.channels_data[ch]['values'].append(raw_val)
-                        self.channels_data[ch]['timestamps'].append(time.time())
-                        self.stats['data_packets'] += 1
-                        self.stats['total_packets'] += 1
-                        if self.stats['data_packets'] % 500 == 0:
-                            print(f"[EEG] 数据包统计 - 通道1: {len(self.channels_data[1]['values'])}, 通道2: {len(self.channels_data[2]['values'])}, 通道3: {len(self.channels_data[3]['values'])}")
-                
-                elif pkt_type == 0x02:
-                    theta, alpha, beta = struct.unpack('<3f', frame[4:16])
-                    if not (is_valid_float(theta) and is_valid_float(alpha) and is_valid_float(beta)):
-                        self.stats['invalid_packets'] += 1
-                        continue
+                    if pkt_type == 0x01:
+                        # === 波形包 (Type 0x01) ===
+                        # [4:8] Data (float, little-endian)
+                        raw_val = struct.unpack('<f', frame[4:8])[0]
+                        if not is_valid_float(raw_val):
+                            self.stats['invalid_packets'] += 1
+                            continue
+                        
+                        with self.lock:
+                            self.channels_data[ch_id]['values'].append(raw_val)
+                            self.channels_data[ch_id]['timestamps'].append(time.time())
+                            self.stats['data_packets'] += 1
+                            self.stats['total_packets'] += 1
+                            if self.stats['data_packets'] % 500 == 0:
+                                print(f"[EEG] 数据包统计 - 通道1: {len(self.channels_data[1]['values'])}, 通道2: {len(self.channels_data[2]['values'])}, 通道3: {len(self.channels_data[3]['values'])}")
                     
-                    with self.lock:
-                        current_time = time.time()
-                        self.features_data[ch]['current'] = {
-                            'theta': theta,
-                            'alpha': alpha,
-                            'beta': beta,
-                            'timestamp': current_time
-                        }
-                        self.features_data[ch]['history']['theta'].append(theta)
-                        self.features_data[ch]['history']['alpha'].append(alpha)
-                        self.features_data[ch]['history']['beta'].append(beta)
-                        self.features_data[ch]['history']['timestamps'].append(current_time)
-                        self.stats['feature_packets'] += 1
-                        self.stats['total_packets'] += 1
-                        if self.stats['feature_packets'] % 10 == 0:
-                            print(f"[EEG] 特征包 - 通道{ch}: Theta={theta:.2f}, Alpha={alpha:.2f}, Beta={beta:.2f}")
+                    elif pkt_type == 0x02:
+                        # === 特征包 (Type 0x02) ===
+                        # [4:8]   Theta (float, little-endian)
+                        # [8:12]  Alpha (float, little-endian)
+                        # [12:16] Beta  (float, little-endian)
+                        theta = struct.unpack('<f', frame[4:8])[0]
+                        alpha = struct.unpack('<f', frame[8:12])[0]
+                        beta  = struct.unpack('<f', frame[12:16])[0]
+                        
+                        # 调试：打印原始字节和解析值
+                        if self.stats['feature_packets'] < 3:
+                            print(f"[EEG DEBUG] 特征包原始字节 - Theta: {frame[4:8].hex()}, Alpha: {frame[8:12].hex()}, Beta: {frame[12:16].hex()}")
+                            print(f"[EEG DEBUG] 特征包解析值 - Theta: {theta}, Alpha: {alpha}, Beta: {beta}")
+                        
+                        if not (is_valid_float(theta) and is_valid_float(alpha) and is_valid_float(beta)):
+                            self.stats['invalid_packets'] += 1
+                            continue
+                        
+                        with self.lock:
+                            current_time = time.time()
+                            self.features_data[ch_id]['current'] = {
+                                'theta': theta,
+                                'alpha': alpha,
+                                'beta': beta,
+                                'timestamp': current_time
+                            }
+                            self.features_data[ch_id]['history']['theta'].append(theta)
+                            self.features_data[ch_id]['history']['alpha'].append(alpha)
+                            self.features_data[ch_id]['history']['beta'].append(beta)
+                            self.features_data[ch_id]['history']['timestamps'].append(current_time)
+                            self.stats['feature_packets'] += 1
+                            self.stats['total_packets'] += 1
+                            if self.stats['feature_packets'] % 10 == 0:
+                                print(f"[EEG] 特征包 - 通道{ch_id}: Theta={theta:.6f}, Alpha={alpha:.6f}, Beta={beta:.6f}")
+                    
+                    # 继续处理下一个数据包（while循环内）
                 
-                # 小睡避免CPU空转
-                time.sleep(0.0005)
-            
             except Exception as e:
                 if self.running:
                     print(f"[EEG] 接收错误: {e}")
                     time.sleep(0.05)
+            
+            # 如果没有数据可读，短暂休眠避免CPU空转
+            if not self.ser.in_waiting and len(buffer) < 3:
+                time.sleep(0.001)
     
     def get_channel_data(self, channel):
         """获取指定通道的波形数据"""
@@ -294,152 +338,30 @@ class EEGDataReceiver:
                 'stats': self.stats.copy()
             }
             
-            # 调试：打印返回的特征值
-            for ch in [1, 2, 3]:
-                ch_key = f'channel{ch}'
-                current = result[ch_key]['features']['current']
-                print(f"[EEG DEBUG] 返回通道{ch}特征值: Theta={current.get('theta')}, Alpha={current.get('alpha')}, Beta={current.get('beta')}")
-            
             return result
     
-    def _mean_recent(self, values, timestamps, window_sec):
-        """计算最近 window_sec 内的均值，若不足返回 None"""
-        if not values or not timestamps:
-            return None
-        now = time.time()
-        start = now - window_sec
-        acc = [v for v, t in zip(values, timestamps) if t >= start]
-        if len(acc) < 1:
-            return None
-        return sum(acc) / len(acc)
-
     def get_emotion_classification(self, window_sec=4.0):
-        """
-        规则版情绪分类（占位，无需训练）
-        - CH1: 左，CH2: 右
-        - 窗口：最近 window_sec 秒，默认 4s
-        - 阈值含义：
-          T_ASYM: 阿尔法不对称性阈值（log(alpha_L) - log(alpha_R)）
-          T_BT_POS: beta/theta 判定积极的阈值
-          T_BT_NEG: beta/theta 判定消极的阈值
-        """
-        # 放宽中性区间：更清晰的积极/消极分界
-        T_ASYM = 0.1   # 不对称性阈值
-        T_BT_POS = 0.7  # beta/theta 判定积极阈值
-        T_BT_NEG = 0.3  # beta/theta 判定消极阈值
-        eps = 1e-6
-
-        with self.lock:
-            hist = self.features_data
-            alpha_l = self._mean_recent(hist[1]['history']['alpha'], hist[1]['history']['timestamps'], window_sec)
-            beta_l = self._mean_recent(hist[1]['history']['beta'], hist[1]['history']['timestamps'], window_sec)
-            theta_l = self._mean_recent(hist[1]['history']['theta'], hist[1]['history']['timestamps'], window_sec)
-
-            alpha_r = self._mean_recent(hist[2]['history']['alpha'], hist[2]['history']['timestamps'], window_sec)
-            beta_r = self._mean_recent(hist[2]['history']['beta'], hist[2]['history']['timestamps'], window_sec)
-            theta_r = self._mean_recent(hist[2]['history']['theta'], hist[2]['history']['timestamps'], window_sec)
-
-            # 记录时间戳列表长度
-            ts_left = list(hist[1]['history']['timestamps'])
-            ts_right = list(hist[2]['history']['timestamps'])
-
-        def count_recent(ts_list):
-            now = time.time()
-            start = now - window_sec
-            return sum(1 for t in ts_list if t >= start)
-
-        left_cnt = count_recent(ts_left)
-        right_cnt = count_recent(ts_right)
-        if left_cnt < 3 or right_cnt < 3:
-            return {
-                'label': 'standby',
-                'score': 0.0,
-                'window_sec': window_sec,
-                'features': {
-                    'alpha_left': alpha_l,
-                    'alpha_right': alpha_r,
-                    'beta_left': beta_l,
-                    'beta_right': beta_r,
-                    'theta_left': theta_l,
-                    'theta_right': theta_r,
-                },
-                'reason': 'insufficient_data'
-            }
-
-        def safe_ratio(a, b):
-            if a is None or b is None:
-                return None
-            if abs(b) < eps:
-                return None
-            return a / b
-
-        def safe_log(x):
-            if x is None or x <= 0:
-                return None
-            return math.log(x)
-
-        bt_left = safe_ratio(beta_l, theta_l)
-        bt_right = safe_ratio(beta_r, theta_r)
-        fai = None
-        log_alpha_l = safe_log(alpha_l)
-        log_alpha_r = safe_log(alpha_r)
-        if log_alpha_l is not None and log_alpha_r is not None:
-            fai = log_alpha_l - log_alpha_r
-
-        label = 'neutral'
-        score = 0.5
-        reason = 'ok'
-
-        if fai is None or bt_left is None or bt_right is None:
-            label = 'standby'
-            score = 0.0
-            reason = 'invalid_feature'
-        else:
-            # 计算积极/消极得分，取最大
-            pos_score = 0.0
-            neg_score = 0.0
-            # 不对称性贡献
-            if fai > T_ASYM:
-                pos_score += min(1.0, fai / T_ASYM) * 0.4
-            if fai < -T_ASYM:
-                neg_score += min(1.0, abs(fai) / T_ASYM) * 0.4
-            # beta/theta 贡献
-            if bt_left > T_BT_POS and bt_right > T_BT_POS:
-                pos_score += min(1.0, min(bt_left, bt_right) / T_BT_POS) * 0.6
-            if bt_left < T_BT_NEG and bt_right < T_BT_NEG:
-                # 防止除零，使用比值反向
-                neg_score += min(1.0, (T_BT_NEG / max(bt_left, bt_right, eps))) * 0.6
-
-            if pos_score > neg_score and pos_score > 0.2:
-                label = 'positive'
-                score = min(1.0, pos_score)
-            elif neg_score > pos_score and neg_score > 0.2:
-                label = 'negative'
-                score = min(1.0, neg_score)
-            else:
-                label = 'neutral'
-                score = 0.5
-
+        """情绪标签识别已禁用，保留接口返回待机状态"""
         return {
-            'label': label,
-            'score': round(float(score), 4),
+            'label': 'standby',
+            'score': 0.0,
             'window_sec': window_sec,
             'features': {
-                'alpha_left': alpha_l,
-                'alpha_right': alpha_r,
-                'beta_left': beta_l,
-                'beta_right': beta_r,
-                'theta_left': theta_l,
-                'theta_right': theta_r,
-                'alpha_log_left': log_alpha_l,
-                'alpha_log_right': log_alpha_r,
-                'fai': fai,
-                'beta_theta_left': bt_left,
-                'beta_theta_right': bt_right
+                'alpha_left': None,
+                'alpha_right': None,
+                'beta_left': None,
+                'beta_right': None,
+                'theta_left': None,
+                'theta_right': None,
+                'alpha_log_left': None,
+                'alpha_log_right': None,
+                'fai': None,
+                'beta_theta_left': None,
+                'beta_theta_right': None
             },
-            'reason': reason
+            'reason': 'disabled'
         }
-    
+
     def get_stats(self):
         """获取统计信息"""
         with self.lock:

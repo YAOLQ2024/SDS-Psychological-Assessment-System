@@ -622,7 +622,7 @@
                     ctx.fillRect(0, 0, width, height);
                     
                     const channelData = eegChannelsData[ch];
-                    const hasWaveform = channelData.waveform && channelData.waveform.length > 10;
+                    const hasWaveform = channelData.waveform && channelData.waveform.length > 1;
                     
                     // 调试信息（每5秒打印一次）
                     if (time % 300 === 0) {
@@ -687,15 +687,9 @@
                                 
                                 // 更新波形数据（全采样，无降采样）
                                 if (chData.waveform && Array.isArray(chData.waveform) && chData.waveform.length > 0) {
-                                    // 检查数据是否有效（不全为0或NaN）
-                                    const validData = chData.waveform.filter(v => v !== 0 && !isNaN(v) && isFinite(v));
-                                    if (validData.length > 0) {
-                                        eegChannelsData[ch].waveform = chData.waveform;
-                                        hasData = true;
-                                        console.log(`[EEG] ✓ 通道${ch}波形数据已更新: ${chData.waveform.length}个数据点 (有效: ${validData.length})`);
-                                    } else {
-                                        console.warn(`[EEG] ⚠ 通道${ch}数据无效（全为0或NaN）`);
-                                    }
+                                    eegChannelsData[ch].waveform = chData.waveform;
+                                    hasData = true;
+                                    console.log(`[EEG] ✓ 通道${ch}波形数据已更新: ${chData.waveform.length}个数据点`);
                                 } else {
                                     console.warn(`[EEG] ⚠ 通道${ch}无波形数据`);
                                 }
@@ -819,34 +813,21 @@
             
             // 只取最近的2000个数据点用于显示（约4秒 @500Hz，无降采样）
             const displayWaveform = waveform.slice(-2000);
+            const minDisplayValue = -200;
+            const maxDisplayValue = 200;
+            const displayRange = maxDisplayValue - minDisplayValue;
+            const padding = 4;
+            const drawHeight = Math.max(1, height - padding * 2);
             
-            // 检查数据是否全为0或相同值（会导致直线）
-            const uniqueValues = new Set(displayWaveform.map(v => v.toFixed(2)));
-            if (uniqueValues.size <= 1) {
-                // 数据全相同，显示提示
-                ctx.fillStyle = 'rgba(255, 165, 0, 0.6)';
-                ctx.font = '11px "JetBrains Mono", monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText(`通道${channelNum}: 数据异常 (值: ${displayWaveform[0]?.toFixed(2) || 'N/A'})`, width / 2, height / 2);
-                return;
-            }
-            
-            // 自动归一化波形数据
-            const waveMin = Math.min(...displayWaveform);
-            const waveMax = Math.max(...displayWaveform);
-            const waveRange = waveMax - waveMin || 1;
-            
-            const centerY = height / 2;
-            const waveAmplitude = height * 0.35; // 主波形使用35%高度
-            
-            // === 1. 绘制主波形（原始数据，降采样后）===
+            // === 1. 绘制主波形（固定量程 -200~200）===
             ctx.beginPath();
-            const step = width / displayWaveform.length;
+            const step = width / (displayWaveform.length - 1);
             
             displayWaveform.forEach((val, i) => {
+                const clamped = Math.max(minDisplayValue, Math.min(maxDisplayValue, val));
+                const normalized = (clamped - minDisplayValue) / displayRange;
                 const x = i * step;
-                const normalized = ((val - waveMin) / waveRange) * 2 - 1;
-                const y = centerY - (normalized * waveAmplitude);
+                const y = padding + (1 - normalized) * drawHeight;
                 
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
@@ -861,13 +842,15 @@
             
             // === 2. 特征值不再在画布上显示，统一在底部图例显示 ===
             
-            // === 3. 绘制中心参考线 ===
+            // === 3. 绘制中心参考线（0值） ===
+            const zeroNormalized = (0 - minDisplayValue) / displayRange;
+            const zeroY = padding + (1 - zeroNormalized) * drawHeight;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
             ctx.lineWidth = 1;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
-            ctx.moveTo(0, centerY);
-            ctx.lineTo(width, centerY);
+            ctx.moveTo(0, zeroY);
+            ctx.lineTo(width, zeroY);
             ctx.stroke();
             ctx.setLineDash([]);
             
@@ -876,10 +859,10 @@
             ctx.font = '9px "JetBrains Mono", monospace';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'top';
-            ctx.fillText(`CH${channelNum} | 范围: ${waveMin.toFixed(2)} ~ ${waveMax.toFixed(2)}`, width - 10, 15);
+            ctx.fillText(`CH${channelNum} | 量程: -200 ~ 200`, width - 10, 15);
             ctx.fillText(`数据点: ${displayWaveform.length}`, width - 10, 28);
         }
-        
+
         function drawSimulatedEEG(ctx, width, height, waves, time) {
             // 模拟数据绘制（原有逻辑）
             ctx.globalCompositeOperation = 'screen';
