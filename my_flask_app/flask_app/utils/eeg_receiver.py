@@ -302,6 +302,144 @@ class EEGDataReceiver:
             
             return result
     
+    def _mean_recent(self, values, timestamps, window_sec):
+        """计算最近 window_sec 内的均值，若不足返回 None"""
+        if not values or not timestamps:
+            return None
+        now = time.time()
+        start = now - window_sec
+        acc = [v for v, t in zip(values, timestamps) if t >= start]
+        if len(acc) < 1:
+            return None
+        return sum(acc) / len(acc)
+
+    def get_emotion_classification(self, window_sec=4.0):
+        """
+        规则版情绪分类（占位，无需训练）
+        - CH1: 左，CH2: 右
+        - 窗口：最近 window_sec 秒，默认 4s
+        - 阈值含义：
+          T_ASYM: 阿尔法不对称性阈值（log(alpha_L) - log(alpha_R)）
+          T_BT_POS: beta/theta 判定积极的阈值
+          T_BT_NEG: beta/theta 判定消极的阈值
+        """
+        # 放宽中性区间：更清晰的积极/消极分界
+        T_ASYM = 0.1   # 不对称性阈值
+        T_BT_POS = 0.7  # beta/theta 判定积极阈值
+        T_BT_NEG = 0.3  # beta/theta 判定消极阈值
+        eps = 1e-6
+
+        with self.lock:
+            hist = self.features_data
+            alpha_l = self._mean_recent(hist[1]['history']['alpha'], hist[1]['history']['timestamps'], window_sec)
+            beta_l = self._mean_recent(hist[1]['history']['beta'], hist[1]['history']['timestamps'], window_sec)
+            theta_l = self._mean_recent(hist[1]['history']['theta'], hist[1]['history']['timestamps'], window_sec)
+
+            alpha_r = self._mean_recent(hist[2]['history']['alpha'], hist[2]['history']['timestamps'], window_sec)
+            beta_r = self._mean_recent(hist[2]['history']['beta'], hist[2]['history']['timestamps'], window_sec)
+            theta_r = self._mean_recent(hist[2]['history']['theta'], hist[2]['history']['timestamps'], window_sec)
+
+            # 记录时间戳列表长度
+            ts_left = list(hist[1]['history']['timestamps'])
+            ts_right = list(hist[2]['history']['timestamps'])
+
+        def count_recent(ts_list):
+            now = time.time()
+            start = now - window_sec
+            return sum(1 for t in ts_list if t >= start)
+
+        left_cnt = count_recent(ts_left)
+        right_cnt = count_recent(ts_right)
+        if left_cnt < 3 or right_cnt < 3:
+            return {
+                'label': 'standby',
+                'score': 0.0,
+                'window_sec': window_sec,
+                'features': {
+                    'alpha_left': alpha_l,
+                    'alpha_right': alpha_r,
+                    'beta_left': beta_l,
+                    'beta_right': beta_r,
+                    'theta_left': theta_l,
+                    'theta_right': theta_r,
+                },
+                'reason': 'insufficient_data'
+            }
+
+        def safe_ratio(a, b):
+            if a is None or b is None:
+                return None
+            if abs(b) < eps:
+                return None
+            return a / b
+
+        def safe_log(x):
+            if x is None or x <= 0:
+                return None
+            return math.log(x)
+
+        bt_left = safe_ratio(beta_l, theta_l)
+        bt_right = safe_ratio(beta_r, theta_r)
+        fai = None
+        log_alpha_l = safe_log(alpha_l)
+        log_alpha_r = safe_log(alpha_r)
+        if log_alpha_l is not None and log_alpha_r is not None:
+            fai = log_alpha_l - log_alpha_r
+
+        label = 'neutral'
+        score = 0.5
+        reason = 'ok'
+
+        if fai is None or bt_left is None or bt_right is None:
+            label = 'standby'
+            score = 0.0
+            reason = 'invalid_feature'
+        else:
+            # 计算积极/消极得分，取最大
+            pos_score = 0.0
+            neg_score = 0.0
+            # 不对称性贡献
+            if fai > T_ASYM:
+                pos_score += min(1.0, fai / T_ASYM) * 0.4
+            if fai < -T_ASYM:
+                neg_score += min(1.0, abs(fai) / T_ASYM) * 0.4
+            # beta/theta 贡献
+            if bt_left > T_BT_POS and bt_right > T_BT_POS:
+                pos_score += min(1.0, min(bt_left, bt_right) / T_BT_POS) * 0.6
+            if bt_left < T_BT_NEG and bt_right < T_BT_NEG:
+                # 防止除零，使用比值反向
+                neg_score += min(1.0, (T_BT_NEG / max(bt_left, bt_right, eps))) * 0.6
+
+            if pos_score > neg_score and pos_score > 0.2:
+                label = 'positive'
+                score = min(1.0, pos_score)
+            elif neg_score > pos_score and neg_score > 0.2:
+                label = 'negative'
+                score = min(1.0, neg_score)
+            else:
+                label = 'neutral'
+                score = 0.5
+
+        return {
+            'label': label,
+            'score': round(float(score), 4),
+            'window_sec': window_sec,
+            'features': {
+                'alpha_left': alpha_l,
+                'alpha_right': alpha_r,
+                'beta_left': beta_l,
+                'beta_right': beta_r,
+                'theta_left': theta_l,
+                'theta_right': theta_r,
+                'alpha_log_left': log_alpha_l,
+                'alpha_log_right': log_alpha_r,
+                'fai': fai,
+                'beta_theta_left': bt_left,
+                'beta_theta_right': bt_right
+            },
+            'reason': reason
+        }
+    
     def get_stats(self):
         """获取统计信息"""
         with self.lock:

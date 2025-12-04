@@ -304,10 +304,21 @@
                          <div class="absolute top-4 right-4 w-12 h-12 border border-tech-primary/20 rounded-full animate-spin-slow border-t-tech-primary/80 pointer-events-none"></div>
                     </div>
                     
-                    <!-- Bottom Legend with Feature Values (3 Channels) -->
-                    <div class="px-3 py-2 bg-black/60 border-t border-white/10 flex flex-col gap-2 text-[8px] font-mono z-10">
+                    <!-- Bottom Legend: 可点击切换 情绪/特征 -->
+                    <div class="px-3 py-2 bg-black/60 border-t border-white/10 flex flex-col gap-2 text-[10px] font-mono z-10 cursor-pointer select-none min-h-[90px] max-h-[90px]" onclick="toggleLegendMode()">
+                        <!-- Emotion Row -->
+                        <div id="eeg-legend-emotion" class="flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <span class="text-tech-primary/70 text-[14px]">实时情绪</span>
+                                <span id="eeg-emo-label" class="text-white font-bold text-[24px]">待机</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-[14px]">
+                                <span>置信度: <span id="eeg-emo-score" class="text-tech-primary font-bold">0.00</span></span>
+                                <span>刷新: <span id="eeg-emo-time" class="text-tech-secondary font-bold">-</span></span>
+                            </div>
+                        </div>
                         <!-- Channel 1 -->
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center eeg-legend-features text-[12px]">
                             <span class="text-tech-primary/70">CH1:</span>
                             <div class="flex gap-4">
                                 <span class="text-tech-primary">Alpha: <span id="eeg-ch1-alpha" class="text-white font-bold">0.00</span></span>
@@ -316,7 +327,7 @@
                             </div>
                         </div>
                         <!-- Channel 2 -->
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center eeg-legend-features text-[12px]">
                             <span class="text-tech-primary/70">CH2:</span>
                             <div class="flex gap-4">
                                 <span class="text-tech-primary">Alpha: <span id="eeg-ch2-alpha" class="text-white font-bold">0.00</span></span>
@@ -325,7 +336,7 @@
                             </div>
                         </div>
                         <!-- Channel 3 -->
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center eeg-legend-features text-[12px]">
                             <span class="text-tech-primary/70">CH3:</span>
                             <div class="flex gap-4">
                                 <span class="text-tech-primary">Alpha: <span id="eeg-ch3-alpha" class="text-white font-bold">0.00</span></span>
@@ -566,6 +577,10 @@
         });
 
         // === NEW: SCI-FI EEG Visualization Logic V4 (三通道独立显示) ===
+        // 前端状态（情绪/特征切换，情绪默认显示）
+        let showEmotion = true;
+        let latestEmotion = { label: 'standby', score: 0.0, updatedAt: '-' };
+
         // === EEG Visualization (Real Data from Serial - 3 Channels) ===
         let eegChannelsData = {
             1: { waveform: [], features: { current: { theta: 0, alpha: 0, beta: 0, timestamp: 0 } } },
@@ -637,7 +652,10 @@
             
             // 连接数据流
             fetchEEGHistory();
+            fetchEEGEmotion();
             setInterval(fetchEEGHistory, 1000); // 每秒更新一次
+            setInterval(fetchEEGEmotion, 1000); // 每秒获取情绪标签
+            renderLegend(); // 初始化图例显示
         }
         
         function fetchEEGHistory() {
@@ -667,7 +685,7 @@
                                     features_beta_len: chData.features?.history?.beta?.length || 0
                                 });
                                 
-                                // 更新波形数据（降采样后的原始数据）
+                                // 更新波形数据（全采样，无降采样）
                                 if (chData.waveform && Array.isArray(chData.waveform) && chData.waveform.length > 0) {
                                     // 检查数据是否有效（不全为0或NaN）
                                     const validData = chData.waveform.filter(v => v !== 0 && !isNaN(v) && isFinite(v));
@@ -682,7 +700,7 @@
                                     console.warn(`[EEG] ⚠ 通道${ch}无波形数据`);
                                 }
                                 
-                                // 更新特征数据（每个通道独立显示）
+                                // 更新特征数据（用于特征模式显示）
                                 if (chData.features && chData.features.current) {
                                     const current = chData.features.current;
                                     
@@ -1307,6 +1325,65 @@
                 </div>
             `;
             document.body.appendChild(modal);
+        }
+
+        // ========== 新增：情绪分类获取与图例切换 ==========
+        // 获取情绪分类
+        function fetchEEGEmotion() {
+            fetch('/eeg/classification')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success && d.data) {
+                        const { label, score, window_sec, reason } = d.data;
+                        latestEmotion = {
+                            label: label || 'standby',
+                            score: typeof score === 'number' ? score : 0.0,
+                            window: window_sec || 4,
+                            reason: reason || 'ok',
+                            updatedAt: new Date().toLocaleTimeString()
+                        };
+                        renderLegend();
+                    } else {
+                        console.warn('[EEG] 情绪分类接口失败:', d.error);
+                    }
+                })
+                .catch(e => console.error('[EEG] 情绪分类请求异常:', e));
+        }
+
+        // 渲染底部图例（情绪 / 特征切换）
+        function renderLegend() {
+            const emoRow = document.getElementById('eeg-legend-emotion');
+            const featRows = document.querySelectorAll('.eeg-legend-features');
+            
+            if (!emoRow || featRows.length === 0) return;
+
+            if (showEmotion) {
+                emoRow.style.display = 'flex';
+                featRows.forEach(r => {
+                    r.style.display = 'flex';
+                    r.style.opacity = '0';
+                });
+                
+                const labelMap = { 'positive': '积极', 'neutral': '中性', 'negative': '消极', 'standby': '待机' };
+                const labelText = labelMap[latestEmotion.label] || '待机';
+                const scoreText = typeof latestEmotion.score === 'number' ? latestEmotion.score.toFixed(2) : '0.00';
+                const timeText = latestEmotion.updatedAt || '-';
+                emoRow.querySelector('#eeg-emo-label').textContent = labelText;
+                emoRow.querySelector('#eeg-emo-score').textContent = scoreText;
+                emoRow.querySelector('#eeg-emo-time').textContent = timeText;
+            } else {
+                emoRow.style.display = 'none';
+                featRows.forEach(r => {
+                    r.style.display = 'flex';
+                    r.style.opacity = '1';
+                });
+            }
+        }
+
+        // 切换按钮
+        function toggleLegendMode() {
+            showEmotion = !showEmotion;
+            renderLegend();
         }
     </script>
 </body>

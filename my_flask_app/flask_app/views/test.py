@@ -511,6 +511,24 @@ def eeg_all_channels():
             }
         })
 
+@ts.route('/eeg/classification')
+def eeg_classification():
+    """规则版情绪分类：积极/中性/消极/待机"""
+    try:
+        from flask_app.utils.eeg_receiver import get_eeg_receiver
+        receiver = get_eeg_receiver()
+        result = receiver.get_emotion_classification(window_sec=4.0)
+        return jsonify({
+            'success': True,
+            'data': result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {}
+        })
+
 @ts.route('/eeg/history')
 def eeg_history_data():
     """获取历史脑电数据（用于绘制波形图）- 保留兼容性"""
