@@ -813,8 +813,8 @@
             
             // 只取最近的2000个数据点用于显示（约4秒 @500Hz，无降采样）
             const displayWaveform = waveform.slice(-2000);
-            const minDisplayValue = -200;
-            const maxDisplayValue = 200;
+            const minDisplayValue = -500;
+            const maxDisplayValue = 500;
             const displayRange = maxDisplayValue - minDisplayValue;
             const padding = 4;
             const drawHeight = Math.max(1, height - padding * 2);

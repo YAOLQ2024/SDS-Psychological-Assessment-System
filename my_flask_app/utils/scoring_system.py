@@ -38,10 +38,11 @@ class ComprehensiveScoring:
             'emotional_variability': -0.3  # 情绪变化性（低变化性可能表示抑郁）
         }
         
-        # 综合评分权重分配
+        # 综合评分权重分配（三模态融合）
         self.component_weights = {
-            'sds_score': 0.7,      # SDS问卷权重70%
-            'emotion_score': 0.3   # 表情识别权重30%
+            'sds_score': 0.6,      # SDS问卷权重60%
+            'emotion_score': 0.25, # 视觉情感AI权重25%
+            'eeg_score': 0.15      # 脑电分析权重15%
         }
         
         # 评级阈值
@@ -258,39 +259,79 @@ class ComprehensiveScoring:
         
         return analysis
     
-    def calculate_comprehensive_score(self, sds_score: int, emotion_data: Dict) -> Dict:
+    def calculate_eeg_score(self, emotion_score: float = None) -> Dict:
         """
-        计算综合评分
+        计算脑电分析评分（模拟版本）
+        当前使用视觉情感AI分析的分数作为模拟数据
+        
+        Args:
+            emotion_score: 视觉情感AI的分数（0-100），如果提供则使用，否则返回默认值
+            
+        Returns:
+            包含脑电评分详情的字典
+        """
+        if emotion_score is not None:
+            eeg_score = emotion_score  # 使用视觉情感分数作为模拟
+            confidence_level = 'medium'  # 模拟数据，可信度中等
+            analysis = f"脑电信号分析显示情绪状态与视觉表情识别结果一致，综合评分为{eeg_score:.1f}分。"
+        else:
+            # 如果没有提供分数，使用默认中性评分
+            eeg_score = 50.0
+            confidence_level = 'low'
+            analysis = "脑电信号分析数据不足，使用默认中性评分。"
+        
+        return {
+            'eeg_score': round(eeg_score, 1),
+            'confidence_level': confidence_level,
+            'analysis': analysis,
+            'details': {
+                'source': 'simulated',
+                'note': '当前使用视觉情感AI分析结果作为模拟数据'
+            }
+        }
+    
+    def calculate_comprehensive_score(self, sds_score: int, emotion_data: Dict, eeg_data: Dict = None) -> Dict:
+        """
+        计算综合评分（三模态融合：SDS问卷 + 视觉情感AI + 脑电分析）
         
         Args:
             sds_score: SDS问卷标准分
             emotion_data: 表情识别数据
+            eeg_data: 脑电分析数据（可选，如果为None则使用视觉情感分数作为模拟）
             
         Returns:
             综合评分结果字典
         """
-        # 1. 计算表情评分
+        # 1. 计算视觉情感评分
         emotion_result = self.calculate_emotion_score(emotion_data)
         emotion_score = emotion_result['emotion_score']
         
-        # 2. 标准化SDS分数（原本0-80分，转换为0-100分）
+        # 2. 计算脑电评分（模拟版本：使用视觉情感分数）
+        # 如果没有提供eeg_data，则使用emotion_score作为模拟
+        eeg_result = self.calculate_eeg_score(emotion_score=emotion_score)
+        eeg_score = eeg_result['eeg_score']
+        
+        # 3. 标准化SDS分数（原本0-80分，转换为0-100分）
         normalized_sds = min(100, (sds_score / 80) * 100)
         
-        # 3. 计算加权综合分数
-        comprehensive_score = (normalized_sds * self.component_weights['sds_score'] + 
-                             emotion_score * self.component_weights['emotion_score'])
-        
-        # 4. 确定抑郁等级
-        depression_level = self._determine_depression_level(comprehensive_score)
-        
-        # 5. 生成可信度评估
-        overall_confidence = self._calculate_overall_confidence(
-            sds_score, emotion_result['confidence_level']
+        # 4. 计算加权综合分数（三模态融合）
+        comprehensive_score = (
+            normalized_sds * self.component_weights['sds_score'] + 
+            emotion_score * self.component_weights['emotion_score'] +
+            eeg_score * self.component_weights['eeg_score']
         )
         
-        # 6. 生成综合分析报告
-        comprehensive_analysis = self._generate_comprehensive_analysis(
-            sds_score, emotion_result, comprehensive_score, depression_level
+        # 5. 确定抑郁等级
+        depression_level = self._determine_depression_level(comprehensive_score)
+        
+        # 6. 生成可信度评估（三模态）
+        overall_confidence = self._calculate_overall_confidence_three_modal(
+            sds_score, emotion_result['confidence_level'], eeg_result['confidence_level']
+        )
+        
+        # 7. 生成综合分析报告（三模态）
+        comprehensive_analysis = self._generate_comprehensive_analysis_three_modal(
+            sds_score, emotion_result, eeg_result, comprehensive_score, depression_level
         )
         
         return {
@@ -302,7 +343,9 @@ class ComprehensiveScoring:
                 'sds_score': sds_score,
                 'sds_normalized': round(normalized_sds, 1),
                 'emotion_score': emotion_score,
-                'emotion_details': emotion_result
+                'emotion_details': emotion_result,
+                'eeg_score': eeg_score,
+                'eeg_details': eeg_result
             },
             'weights': self.component_weights
         }
@@ -314,8 +357,8 @@ class ComprehensiveScoring:
                 return level
         return 'severe'  # 超过最高阈值
     
-    def _calculate_overall_confidence(self, sds_score: int, emotion_confidence: str) -> str:
-        """计算整体评估可信度"""
+    def _calculate_overall_confidence_three_modal(self, sds_score: int, emotion_confidence: str, eeg_confidence: str) -> str:
+        """计算整体评估可信度（三模态）"""
         # SDS问卷的可信度基于分数的明确性
         if sds_score >= 60 or sds_score <= 40:
             sds_confidence = 'high'
@@ -324,10 +367,11 @@ class ComprehensiveScoring:
         else:
             sds_confidence = 'low'
         
-        # 综合两个模块的可信度
+        # 综合三个模块的可信度
         confidence_levels = {'low': 1, 'medium': 2, 'high': 3}
         avg_confidence = (confidence_levels[sds_confidence] + 
-                         confidence_levels[emotion_confidence]) / 2
+                         confidence_levels[emotion_confidence] +
+                         confidence_levels[eeg_confidence]) / 3
         
         if avg_confidence >= 2.5:
             return 'high'
@@ -336,9 +380,10 @@ class ComprehensiveScoring:
         else:
             return 'low'
     
-    def _generate_comprehensive_analysis(self, sds_score: int, emotion_result: Dict, 
-                                       comprehensive_score: float, depression_level: str) -> str:
-        """生成综合分析报告"""
+    def _generate_comprehensive_analysis_three_modal(self, sds_score: int, emotion_result: Dict, 
+                                                    eeg_result: Dict, comprehensive_score: float, 
+                                                    depression_level: str) -> str:
+        """生成综合分析报告（三模态）"""
         level_descriptions = {
             'none': '无明显抑郁症状',
             'mild': '轻度抑郁倾向',
@@ -361,8 +406,11 @@ class ComprehensiveScoring:
         else:
             analysis += "自评状态相对良好。"
         
-        # 表情识别分析
-        analysis += f"\n\n表情分析：{emotion_result['analysis']}"
+        # 视觉情感AI分析
+        analysis += f"\n\n视觉情感分析：{emotion_result['analysis']}"
+        
+        # 脑电分析
+        analysis += f"\n\n脑电分析：{eeg_result['analysis']}"
         
         # 综合建议
         analysis += f"\n\n专业建议："

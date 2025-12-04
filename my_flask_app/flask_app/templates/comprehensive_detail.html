@@ -209,7 +209,7 @@
         </div>
 
         <!-- Detailed Breakdown -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- SDS Analysis -->
             <div class="cyber-panel panel-3d-top p-6 group relative">
                 <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
@@ -257,6 +257,32 @@
                         </div>
                         <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
                             <div class="bg-tech-secondary h-full rounded-full shadow-[0_0_10px_#d946ef]" style="width: {{ "%.0f"|format(comprehensive_result.weights.emotion_score * 100) }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EEG Analysis -->
+            <div class="cyber-panel panel-3d-top p-6 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <h4 class="text-lg font-bold text-tech-success mb-6 flex items-center font-tech tracking-wider">
+                    <i class="fas fa-brain mr-3"></i> 脑电分析
+                </h4>
+                
+                <div class="space-y-4">
+                    <div class="bg-white/5 rounded p-4 border border-white/5 flex justify-between items-center">
+                        <span class="text-xs text-gray-400 font-mono">AI 评分</span>
+                        <span class="text-2xl font-bold text-white font-tech">{{ "%.1f"|format(comprehensive_result.components.eeg_score) }} <span class="text-xs text-gray-600">/ 100</span></span>
+                    </div>
+                    <div class="bg-white/5 rounded p-4 border border-white/5">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs text-gray-400 font-mono">权重占比</span>
+                            <span class="text-lg font-bold text-tech-success font-mono">{{ "%.0f"|format(comprehensive_result.weights.eeg_score * 100) }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-tech-success h-full rounded-full shadow-[0_0_10px_#05ffa1]" style="width: {{ "%.0f"|format(comprehensive_result.weights.eeg_score * 100) }}%"></div>
                         </div>
                     </div>
                 </div>

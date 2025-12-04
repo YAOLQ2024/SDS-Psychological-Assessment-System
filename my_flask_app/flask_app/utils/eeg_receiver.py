@@ -3,7 +3,7 @@
 """
 脑电数据接收服务 - 3通道独立处理
 采样率: 500Hz
-波特率: 250000
+波特率: 230400
 """
 
 import serial
@@ -71,6 +71,45 @@ class EEGDataReceiver:
         # 不再清空串口缓冲区，避免误删正常数据
         self.max_consecutive_errors = 1000000
         
+        # ==========================================
+        # 情绪推理相关配置（可配置阈值）
+        # ==========================================
+        self.emotion_thresholds = {
+            'T_ASYM': 0.1,      # Alpha不对称性阈值
+            'T_BT_POS': 0.7,    # beta/theta 判定积极的阈值
+            'T_BT_NEG': 0.3,    # beta/theta 判定消极的阈值
+            'MIN_SCORE': 0.2,   # 最小得分阈值（低于此值为neutral）
+            'WINDOW_SEC': 4.0,  # 分析窗口大小（秒）
+            'MIN_DATA_POINTS': 3  # 最小数据点数
+        }
+        
+        # 情绪推理结果缓存（线程安全）
+        self.emotion_result_cache = {
+            'label': 'standby',
+            'score': 0.0,
+            'window_sec': 4.0,
+            'timestamp': 0,
+            'features': {
+                'alpha_left': None,
+                'alpha_right': None,
+                'beta_left': None,
+                'beta_right': None,
+                'theta_left': None,
+                'theta_right': None,
+                'alpha_log_left': None,
+                'alpha_log_right': None,
+                'fai': None,
+                'beta_theta_left': None,
+                'beta_theta_right': None
+            },
+            'reason': 'initializing'
+        }
+        self.emotion_lock = threading.Lock()  # 保护情绪结果缓存
+        
+        # 情绪推理线程控制
+        self.emotion_thread = None
+        self.emotion_running = False
+        
         # 初始化CRC表
         self._init_crc_table()
         
@@ -100,7 +139,7 @@ class EEGDataReceiver:
         return crc
     
     def start(self):
-        """启动接收线程"""
+        """启动接收线程和情绪推理线程"""
         if self.running:
             print("[EEG] 接收器已在运行")
             return True
@@ -110,14 +149,19 @@ class EEGDataReceiver:
             self.ser.reset_input_buffer()
             self.running = True
             
+            # 启动数据接收线程
             self.thread = threading.Thread(target=self._receive_loop, daemon=True)
             self.thread.start()
+            
+            # 启动情绪推理线程
+            self._start_emotion_inference()
             
             print("[EEG] 脑电接收器已启动")
             print(f"  端口: {self.serial_port}")
             print(f"  波特率: {self.baud_rate}")
             print("  采样率: 500Hz")
             print("  通道数: 3")
+            print("[EEG] 情绪推理线程已启动（1000ms更新频率）")
             return True
             
         except Exception as e:
@@ -125,8 +169,13 @@ class EEGDataReceiver:
             return False
     
     def stop(self):
-        """停止接收"""
+        """停止接收和情绪推理"""
         self.running = False
+        
+        # 停止情绪推理线程
+        self._stop_emotion_inference()
+        
+        # 停止数据接收线程
         if self.thread:
             self.thread.join(timeout=2)
         if self.ser and self.ser.is_open:
@@ -215,6 +264,8 @@ class EEGDataReceiver:
                             self.channels_data[ch_id]['timestamps'].append(time.time())
                             self.stats['data_packets'] += 1
                             self.stats['total_packets'] += 1
+                            
+                            # 统计日志：每500个数据包打印一次（减少日志量）
                             if self.stats['data_packets'] % 500 == 0:
                                 print(f"[EEG] 数据包统计 - 通道1: {len(self.channels_data[1]['values'])}, 通道2: {len(self.channels_data[2]['values'])}, 通道3: {len(self.channels_data[3]['values'])}")
                     
@@ -340,27 +391,269 @@ class EEGDataReceiver:
             
             return result
     
-    def get_emotion_classification(self, window_sec=4.0):
-        """情绪标签识别已禁用，保留接口返回待机状态"""
+    # ==========================================
+    # 情绪推理相关方法（独立线程，不影响数据接收）
+    # ==========================================
+    
+    def _start_emotion_inference(self):
+        """启动情绪推理线程"""
+        if self.emotion_running:
+            return
+        
+        self.emotion_running = True
+        self.emotion_thread = threading.Thread(
+            target=self._emotion_inference_loop,
+            daemon=True,
+            name="EEG-Emotion-Inference"
+        )
+        self.emotion_thread.start()
+        print("[EEG Emotion] 推理线程已启动")
+    
+    def _stop_emotion_inference(self):
+        """停止情绪推理线程"""
+        self.emotion_running = False
+        if self.emotion_thread:
+            self.emotion_thread.join(timeout=2.0)
+        print("[EEG Emotion] 推理线程已停止")
+    
+    def _emotion_inference_loop(self):
+        """情绪推理循环（独立线程，1000ms更新一次）"""
+        while self.emotion_running:
+            try:
+                # 计算情绪分类
+                result = self._compute_emotion_classification()
+                
+                # 更新缓存（线程安全）
+                with self.emotion_lock:
+                    self.emotion_result_cache = result
+                    
+            except Exception as e:
+                print(f"[EEG Emotion] 推理错误: {e}")
+                import traceback
+                traceback.print_exc()
+                # 错误时保持缓存不变，避免返回错误数据
+            
+            # 等待1000ms后再次推理
+            time.sleep(1.0)
+    
+    def _mean_recent(self, values, timestamps, window_sec):
+        """计算最近window_sec秒内的平均值"""
+        if not values or not timestamps:
+            return None
+        
+        now = time.time()
+        start_time = now - window_sec
+        acc = []
+        
+        # 遍历时间戳，收集窗口内的值
+        for i, ts in enumerate(timestamps):
+            if ts >= start_time and i < len(values):
+                val = values[i]
+                if val is not None and not math.isnan(val) and not math.isinf(val):
+                    acc.append(val)
+        
+        if len(acc) < 1:
+            return None
+        
+        return sum(acc) / len(acc)
+    
+    def _compute_emotion_classification(self):
+        """
+        计算情绪分类（核心推理逻辑）
+        基于Alpha不对称性和Beta/Theta比值
+        - CH1: 左，CH2: 右
+        """
+        window_sec = self.emotion_thresholds['WINDOW_SEC']
+        T_ASYM = self.emotion_thresholds['T_ASYM']
+        T_BT_POS = self.emotion_thresholds['T_BT_POS']
+        T_BT_NEG = self.emotion_thresholds['T_BT_NEG']
+        MIN_SCORE = self.emotion_thresholds['MIN_SCORE']
+        MIN_DATA_POINTS = self.emotion_thresholds['MIN_DATA_POINTS']
+        eps = 1e-6
+        
+        # 只读访问特征数据（快速复制，立即释放锁）
+        with self.lock:
+            # 快速复制数据，不进行计算，避免长时间持有锁
+            hist = {
+                1: {
+                    'history': {
+                        'alpha': list(self.features_data[1]['history']['alpha']),
+                        'beta': list(self.features_data[1]['history']['beta']),
+                        'theta': list(self.features_data[1]['history']['theta']),
+                        'timestamps': list(self.features_data[1]['history']['timestamps'])
+                    }
+                },
+                2: {
+                    'history': {
+                        'alpha': list(self.features_data[2]['history']['alpha']),
+                        'beta': list(self.features_data[2]['history']['beta']),
+                        'theta': list(self.features_data[2]['history']['theta']),
+                        'timestamps': list(self.features_data[2]['history']['timestamps'])
+                    }
+                }
+            }
+        
+        # 在锁外进行计算，避免阻塞数据接收线程
+        alpha_l = self._mean_recent(hist[1]['history']['alpha'], hist[1]['history']['timestamps'], window_sec)
+        beta_l = self._mean_recent(hist[1]['history']['beta'], hist[1]['history']['timestamps'], window_sec)
+        theta_l = self._mean_recent(hist[1]['history']['theta'], hist[1]['history']['timestamps'], window_sec)
+        
+        alpha_r = self._mean_recent(hist[2]['history']['alpha'], hist[2]['history']['timestamps'], window_sec)
+        beta_r = self._mean_recent(hist[2]['history']['beta'], hist[2]['history']['timestamps'], window_sec)
+        theta_r = self._mean_recent(hist[2]['history']['theta'], hist[2]['history']['timestamps'], window_sec)
+        
+        # 复制时间戳列表用于计数
+        ts_left = hist[1]['history']['timestamps']
+        ts_right = hist[2]['history']['timestamps']
+        
+        # 统计窗口内的数据点数
+        def count_recent(ts_list):
+            now = time.time()
+            start = now - window_sec
+            return sum(1 for t in ts_list if t >= start)
+        
+        left_cnt = count_recent(ts_left)
+        right_cnt = count_recent(ts_right)
+        
+        # 数据不足，返回standby
+        if left_cnt < MIN_DATA_POINTS or right_cnt < MIN_DATA_POINTS:
+            return {
+                'label': 'standby',
+                'score': 0.0,
+                'window_sec': window_sec,
+                'timestamp': time.time(),
+                'features': {
+                    'alpha_left': alpha_l,
+                    'alpha_right': alpha_r,
+                    'beta_left': beta_l,
+                    'beta_right': beta_r,
+                    'theta_left': theta_l,
+                    'theta_right': theta_r,
+                    'alpha_log_left': None,
+                    'alpha_log_right': None,
+                    'fai': None,
+                    'beta_theta_left': None,
+                    'beta_theta_right': None
+                },
+                'reason': 'insufficient_data'
+            }
+        
+        # 辅助函数：安全计算比值
+        def safe_ratio(a, b):
+            if a is None or b is None:
+                return None
+            # 放宽阈值，极小值也可以计算比值（只要不为0）
+            if abs(b) < 1e-30:
+                return None
+            return a / b
+        
+        # 辅助函数：安全计算对数
+        def safe_log(x):
+            if x is None:
+                return None
+            if x <= 0:
+                return None
+            return math.log(x)
+        
+        # 计算Beta/Theta比值
+        bt_left = safe_ratio(beta_l, theta_l)
+        bt_right = safe_ratio(beta_r, theta_r)
+        
+        # 计算Alpha不对称性（FAI: Frontal Alpha Asymmetry）
+        log_alpha_l = safe_log(alpha_l)
+        log_alpha_r = safe_log(alpha_r)
+        fai = None
+        if log_alpha_l is not None and log_alpha_r is not None:
+            fai = log_alpha_l - log_alpha_r  # 左减右
+        
+        # 默认值
+        label = 'neutral'
+        score = 0.5
+        reason = 'ok'
+        
+        # 特征值无效
+        if fai is None or bt_left is None or bt_right is None:
+            return {
+                'label': 'standby',
+                'score': 0.0,
+                'window_sec': window_sec,
+                'timestamp': time.time(),
+                'features': {
+                    'alpha_left': alpha_l,
+                    'alpha_right': alpha_r,
+                    'beta_left': beta_l,
+                    'beta_right': beta_r,
+                    'theta_left': theta_l,
+                    'theta_right': theta_r,
+                    'alpha_log_left': log_alpha_l,
+                    'alpha_log_right': log_alpha_r,
+                    'fai': fai,
+                    'beta_theta_left': bt_left,
+                    'beta_theta_right': bt_right
+                },
+                'reason': 'invalid_feature'
+            }
+        
+        # 计算积极/消极得分
+        pos_score = 0.0
+        neg_score = 0.0
+        
+        # Alpha不对称性贡献（40%权重）
+        if fai > T_ASYM:
+            pos_score += min(1.0, fai / T_ASYM) * 0.4
+        if fai < -T_ASYM:
+            neg_score += min(1.0, abs(fai) / T_ASYM) * 0.4
+        
+        # Beta/Theta比值贡献（60%权重）
+        if bt_left > T_BT_POS and bt_right > T_BT_POS:
+            pos_score += min(1.0, min(bt_left, bt_right) / T_BT_POS) * 0.6
+        if bt_left < T_BT_NEG and bt_right < T_BT_NEG:
+            neg_score += min(1.0, (T_BT_NEG / max(bt_left, bt_right, eps))) * 0.6
+        
+        # 确定最终标签
+        if pos_score > neg_score and pos_score > MIN_SCORE:
+            label = 'positive'
+            score = min(1.0, pos_score)
+        elif neg_score > pos_score and neg_score > MIN_SCORE:
+            label = 'negative'
+            score = min(1.0, neg_score)
+        else:
+            label = 'neutral'
+            score = 0.5
+        
         return {
-            'label': 'standby',
-            'score': 0.0,
+            'label': label,
+            'score': round(float(score), 4),
             'window_sec': window_sec,
+            'timestamp': time.time(),
             'features': {
-                'alpha_left': None,
-                'alpha_right': None,
-                'beta_left': None,
-                'beta_right': None,
-                'theta_left': None,
-                'theta_right': None,
-                'alpha_log_left': None,
-                'alpha_log_right': None,
-                'fai': None,
-                'beta_theta_left': None,
-                'beta_theta_right': None
+                'alpha_left': alpha_l,
+                'alpha_right': alpha_r,
+                'beta_left': beta_l,
+                'beta_right': beta_r,
+                'theta_left': theta_l,
+                'theta_right': theta_r,
+                'alpha_log_left': log_alpha_l,
+                'alpha_log_right': log_alpha_r,
+                'fai': fai,
+                'beta_theta_left': bt_left,
+                'beta_theta_right': bt_right
             },
-            'reason': 'disabled'
+            'reason': reason
         }
+    
+    def get_emotion_classification(self, window_sec=4.0):
+        """
+        获取情绪分类结果（立即返回缓存，无计算延迟）
+        此方法不进行实际计算，只返回后台推理线程的结果
+        """
+        with self.emotion_lock:
+            # 返回缓存的副本，避免外部修改
+            result = self.emotion_result_cache.copy()
+            # 如果请求的窗口大小与缓存不一致，更新窗口大小（但不重新计算）
+            if window_sec != result.get('window_sec'):
+                result['window_sec'] = window_sec
+            return result
 
     def get_stats(self):
         """获取统计信息"""
