@@ -6375,3 +6375,17 @@ RuntimeError: [-1][ACL: general failure]
 2025-12-05 03:13:32,325 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
 2025-12-05 03:34:48,772 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
 2025-12-05 03:47:13,575 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 04:12:22,224 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 04:21:45,548 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 04:29:44,974 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 04:36:51,256 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 04:42:24,938 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 04:56:30,330 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 04:58:20,927 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 05:02:28,644 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 05:05:27,407 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 05:13:08,028 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 05:19:50,290 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 05:36:11,039 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 05:53:08,943 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log
+2025-12-05 05:57:27,620 - utils.emotion_recognition_npu - INFO - 表情识别日志已配置，日志文件: /home/HwHiAiUser/depression/yiyuzhen_project/logs/emotion_recognition.log

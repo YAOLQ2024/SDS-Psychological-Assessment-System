@@ -483,8 +483,15 @@ def eeg_all_channels():
                 ch_data = all_data[ch_key]
                 waveform_len = len(ch_data.get('waveform', []))
                 features = ch_data.get('features', {})
+                current = features.get('current', {})
                 hist = features.get('history', {})
-                print(f"  通道{ch}: 波形={waveform_len}, Theta={len(hist.get('theta', []))}, Alpha={len(hist.get('alpha', []))}, Beta={len(hist.get('beta', []))}")
+                theta_val = current.get('theta') if current else None
+                alpha_val = current.get('alpha') if current else None
+                beta_val = current.get('beta') if current else None
+                theta_str = f"{theta_val:.2f}" if theta_val is not None else "None"
+                alpha_str = f"{alpha_val:.2f}" if alpha_val is not None else "None"
+                beta_str = f"{beta_val:.2f}" if beta_val is not None else "None"
+                print(f"  通道{ch}: 波形={waveform_len}, 当前特征值 - Theta={theta_str}, Alpha={alpha_str}, Beta={beta_str}, 历史记录 - Theta={len(hist.get('theta', []))}, Alpha={len(hist.get('alpha', []))}, Beta={len(hist.get('beta', []))}")
         
         return jsonify({
             'success': True,
