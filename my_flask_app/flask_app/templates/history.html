@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测评历史 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #050b14; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-tech-primary selection:text-black pb-6">
+    
+    <!-- Background Scan Line -->
+    <div class="fixed inset-0 pointer-events-none opacity-10 bg-scan-line animate-scan z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="h-16 border-b border-tech-primary/20 bg-tech-panel/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="w-full max-w-[1920px] mx-auto h-full px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-6">
+                <form action="/main" method="GET" class="inline">
+                    <button type="submit" class="group flex items-center space-x-2 text-gray-400 hover:text-tech-primary transition-colors">
+                        <div class="w-8 h-8 flex items-center justify-center border border-gray-700 rounded group-hover:border-tech-primary group-hover:shadow-neon transition-all bg-black/40">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </div>
+                        <span class="font-bold tracking-wider text-xs">返回仪表板</span>
+                    </button>
+                </form>
+                <div class="h-6 w-px bg-white/10"></div>
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-tech-primary to-tech-secondary rounded flex items-center justify-center shadow-neon">
+                        <i class="fas fa-history text-white text-xs"></i>
+                    </div>
+                    <span class="text-xl font-bold font-tech text-white tracking-wider">测评历史记录</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                 <div class="text-xs font-mono text-gray-500">用户: <span class="text-tech-primary">{{ user_name }}</span></div>
+                 <div class="w-8 h-8 rounded border border-tech-primary/30 flex items-center justify-center text-tech-primary bg-tech-primary/5 shadow-[0_0_5px_rgba(0,240,255,0.2)]">
+                    <i class="fas fa-wifi"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full max-w-[1920px] mx-auto px-6 py-8 relative z-10 flex flex-col gap-6">
+        
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Total Count -->
+            <div class="cyber-panel panel-3d-top p-6 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 mb-1">测评总数</p>
+                        <p class="text-3xl font-bold text-tech-primary font-tech">{{ all_times }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-tech-primary/10 rounded-lg flex items-center justify-center border border-tech-primary/30 shadow-glow-cyan text-tech-primary">
+                        <i class="fas fa-chart-bar text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Latest Status -->
+            <div class="cyber-panel panel-3d-top p-6 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 mb-1">最新状态</p>
+                        <p class="text-lg font-bold font-tech 
+                            {% if status == '无抑郁' %}text-tech-success{% elif status == '轻度抑郁' %}text-tech-warning{% elif status == '中度抑郁' %}text-orange-500{% elif status == '重度抑郁' %}text-tech-danger{% else %}text-gray-500{% endif %}">
+                            {{ status }}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-tech-success/10 rounded-lg flex items-center justify-center border border-tech-success/30 shadow-[0_0_10px_rgba(5,255,161,0.2)] text-tech-success">
+                        <i class="fas fa-heartbeat text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Days Since -->
+            <div class="cyber-panel panel-3d-top p-6 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 mb-1">上次测评</p>
+                        <p class="text-3xl font-bold text-tech-secondary font-tech">{{ delta }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-tech-secondary/10 rounded-lg flex items-center justify-center border border-tech-secondary/30 shadow-[0_0_10px_rgba(217,70,239,0.2)] text-tech-secondary">
+                        <i class="fas fa-calendar-alt text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-1 font-mono">天前</p>
+            </div>
+            
+            <!-- Total Time -->
+            <div class="cyber-panel panel-3d-top p-6 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 mb-1">累计时长</p>
+                        <p class="text-lg font-bold text-orange-400 font-tech">{{ total_time_str }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center border border-orange-500/30 text-orange-400">
+                        <i class="fas fa-clock text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trend Analysis -->
+        {% if sorted_list and all_times >= 2 %}
+        <div class="cyber-panel panel-3d-top p-8 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <h3 class="text-xl font-bold text-white mb-6 flex items-center font-tech tracking-wider">
+                <i class="fas fa-chart-line text-tech-primary mr-3"></i>
+                心理趋势分析
+            </h3>
+            <div class="bg-black/40 rounded-xl p-6 border border-white/5 relative">
+                <!-- Grid Lines Decoration -->
+                <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+                <canvas id="trendChart" class="w-full relative z-10" style="height: 300px;" 
+                    data-chart-data='[
+                        {% for item in sorted_list[:10] %}
+                        {"date":"{{ item.finish_time }}","score":{{ item.score if item.score else 0 }},"result":"{{ item.result if item.result else "未知" }}","time":"{{ item.finish_time if item.finish_time else "" }}"}{{ "," if not loop.last else "" }}
+                        {% endfor %}
+                    ]'>
+                </canvas>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-tech-primary/5 border border-tech-primary/20 rounded-xl p-4">
+                    <h4 class="font-bold text-tech-primary mb-2 text-xs font-mono">数据洞察</h4>
+                    <p class="text-xs text-gray-400">趋势可视化显示了您随时间推移的心理状态轨迹。</p>
+                </div>
+                <div class="bg-tech-success/5 border border-tech-success/20 rounded-xl p-4">
+                    <h4 class="font-bold text-tech-success mb-2 text-xs font-mono">健康建议</h4>
+                    <p class="text-xs text-gray-400">定期监测是关键。保持一致的评估间隔。</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- History List -->
+        <div class="cyber-panel panel-3d-top p-6 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="w-12 h-12 bg-tech-primary/10 rounded-lg flex items-center justify-center border border-tech-primary/30">
+                    <i class="fas fa-list text-tech-primary text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white font-tech tracking-wider">完整日志</h2>
+                    <p class="text-gray-500 text-xs font-mono">详细测评历史记录</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                {% if sorted_list %}
+                    {% for item in sorted_list %}
+                    <div class="bg-white/5 hover:bg-white/10 border border-white/5 hover:border-tech-primary/50 rounded-lg p-4 transition-all group/item relative overflow-hidden">
+                        <!-- Left Status Bar -->
+                        <div class="absolute left-0 top-0 bottom-0 w-1 
+                            {% if item.result == '无抑郁' %}bg-tech-success{% elif item.result == '轻度抑郁' %}bg-tech-warning{% elif item.result == '中度抑郁' %}bg-orange-500{% elif item.result == '重度抑郁' %}bg-tech-danger{% else %}bg-gray-500{% endif %}">
+                        </div>
+
+                        <div class="flex items-center justify-between pl-4">
+                            <div class="flex items-center space-x-6">
+                                <div>
+                                    <div class="flex items-center space-x-3 mb-1">
+                                        <h3 class="text-base font-bold text-white font-mono">SDS 量表</h3>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border 
+                                            {% if item.result == '无抑郁' %}bg-tech-success/10 text-tech-success border-tech-success/30{% elif item.result == '轻度抑郁' %}bg-tech-warning/10 text-tech-warning border-tech-warning/30{% elif item.result == '中度抑郁' %}bg-orange-500/10 text-orange-500 border-orange-500/30{% elif item.result == '重度抑郁' %}bg-tech-danger/10 text-tech-danger border-tech-danger/30{% else %}bg-gray-500/10 text-gray-400 border-gray-500/30{% endif %}">
+                                            {{ item.result }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-6 text-xs text-gray-500 font-mono">
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            <span>{{ item.finish_time }}</span>
+                                        </div>
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-clock"></i>
+                                            <span>{{ item.use_time }}秒</span>
+                                        </div>
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-star text-tech-secondary"></i>
+                                            <span class="text-white">{{ item.score }} 分</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="flex items-center space-x-3 opacity-80 group-hover/item:opacity-100 transition-opacity">
+                                <form action="/detail" method="POST" class="inline">
+                                    <input type="hidden" name="test_id" value="{{ item.id }}">
+                                    <button type="submit" class="flex items-center space-x-2 bg-tech-primary/10 hover:bg-tech-primary/20 text-tech-primary border border-tech-primary/30 hover:border-tech-primary px-3 py-1.5 rounded text-xs font-bold transition-all">
+                                        <i class="fas fa-eye"></i>
+                                        <span>详情</span>
+                                    </button>
+                                </form>
+                                {% if item.comprehensive_result %}
+                                <form action="/comprehensive-detail" method="POST" class="inline">
+                                    <input type="hidden" name="test_id" value="{{ item.id }}">
+                                    <button type="submit" class="flex items-center space-x-2 bg-tech-secondary/10 hover:bg-tech-secondary/20 text-tech-secondary border border-tech-secondary/30 hover:border-tech-secondary px-3 py-1.5 rounded text-xs font-bold transition-all">
+                                        <i class="fas fa-brain"></i>
+                                        <span>分析</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <button class="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 hover:border-white/30 px-3 py-1.5 rounded text-xs font-bold transition-all">
+                                    <i class="fas fa-download"></i>
+                                    <span>导出</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <!-- Empty State -->
+                    <div class="py-12 text-center border-2 border-dashed border-white/10 rounded-xl bg-white/5">
+                        <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-clipboard-list text-gray-500 text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2 font-tech">暂无记录</h3>
+                        <p class="text-gray-500 text-sm mb-6 font-mono">系统等待首次测评数据。</p>
+                        <form action="/SDS" method="GET" class="inline">
+                            <button type="submit" class="bg-tech-primary hover:bg-white text-black px-6 py-2 rounded font-bold transition-all shadow-neon">
+                                开始测评
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="flex justify-center space-x-4 mt-2 mb-8">
+            <form action="/SDS" method="GET" class="inline">
+                <button type="submit" class="flex items-center space-x-2 bg-tech-primary hover:bg-white text-black border border-tech-primary px-6 py-3 rounded font-bold transition-all shadow-neon hover:scale-105 font-tech">
+                    <i class="fas fa-plus"></i>
+                    <span>新建测评</span>
+                </button>
+            </form>
+            <button class="flex items-center space-x-2 bg-transparent hover:bg-white/10 text-tech-secondary border border-tech-secondary px-6 py-3 rounded font-bold transition-all hover:scale-105 font-tech">
+                <i class="fas fa-file-export"></i>
+                <span>导出全部</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        // Chart Config
+        function initTrendChart() {
+            const ctx = document.getElementById('trendChart');
+            if (!ctx) return;
+            
+            // Get data from data attribute
+            const rawDataStr = ctx.getAttribute('data-chart-data');
+            if (!rawDataStr) return;
+            
+            try {
+                const rawData = JSON.parse(rawDataStr);
+                
+                // Process data
+                const chartData = rawData.map(item => ({
+                    date: item.date.split(' ')[0],
+                    score: item.score,
+                    result: item.result,
+                    time: item.time
+                })).reverse();
+
+                // Gradient
+                const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, 'rgba(0, 240, 255, 0.3)');
+                gradient.addColorStop(1, 'rgba(0, 240, 255, 0.05)');
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(item => item.date),
+                        datasets: [{
+                            label: 'SDS 评分',
+                            data: chartData.map(item => item.score),
+                            borderColor: '#00f0ff',
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#050b14',
+                            pointBorderColor: '#00f0ff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: '#00f0ff',
+                            pointHoverBorderColor: '#ffffff',
+                            pointHoverBorderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(5, 11, 20, 0.9)',
+                                titleColor: '#00f0ff',
+                                bodyColor: '#ffffff',
+                                titleFont: { family: '"JetBrains Mono", monospace' },
+                                bodyFont: { family: '"JetBrains Mono", monospace' },
+                                borderColor: 'rgba(0, 240, 255, 0.3)',
+                                borderWidth: 1,
+                                padding: 10,
+                                displayColors: false,
+                                callbacks: {
+                                    title: function(context) {
+                                        const dataIndex = context[0].dataIndex;
+                                        return chartData[dataIndex].time;
+                                    },
+                                    label: function(context) {
+                                        const dataIndex = context.dataIndex;
+                                        const data = chartData[dataIndex];
+                                        return [
+                                            `分数: ${data.score}`,
+                                            `状态: ${data.result}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: {
+                                    color: '#64748b',
+                                    font: { family: '"JetBrains Mono", monospace', size: 10 }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: {
+                                    color: '#64748b',
+                                    font: { family: '"JetBrains Mono", monospace', size: 10 }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Chart data parse error:', e);
+            }
+        }
+        
+        // Initialize chart when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(initTrendChart, 100);
+            });
+        } else {
+            setTimeout(initTrendChart, 100);
+        }
+    </script>
+</body>
+</html>

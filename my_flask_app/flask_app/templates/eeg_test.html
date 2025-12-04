@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>脑电数据流测试</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        .log { background: #111; padding: 10px; margin: 10px 0; border: 1px solid #0f0; max-height: 400px; overflow-y: auto; }
+        .error { color: #f00; }
+        .success { color: #0ff; }
+        canvas { border: 1px solid #0f0; background: #000; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>🧠 脑电数据流测试页面</h1>
+    
+    <h2>连接状态: <span id="status">未连接</span></h2>
+    
+    <h3>实时日志:</h3>
+    <div class="log" id="log"></div>
+    
+    <h3>最新数据:</h3>
+    <pre id="latest-data">等待数据...</pre>
+    
+    <h3>波形图:</h3>
+    <canvas id="waveform" width="800" height="200"></canvas>
+    
+    <script>
+        const log = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+        const latestDataEl = document.getElementById('latest-data');
+        const canvas = document.getElementById('waveform');
+        const ctx = canvas.getContext('2d');
+        
+        let dataBuffer = [];
+        
+        function addLog(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+            log.innerHTML += `<div class="${className}">[${time}] ${msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // 连接到 SSE 流
+        addLog('正在连接到 /eeg/stream...');
+        const eventSource = new EventSource('/eeg/stream');
+        
+        eventSource.onopen = () => {
+            statusEl.textContent = '✓ 已连接';
+            statusEl.style.color = '#0f0';
+            addLog('✓ SSE 连接已建立', 'success');
+        };
+        
+        eventSource.onmessage = (event) => {
+            try {
+                const batch = JSON.parse(event.data);
+                addLog(`收到数据批次: ${batch.length} 条`, 'success');
+                
+                if (batch && batch.length > 0) {
+                    batch.forEach(item => {
+                        if (item.type === 'raw') {
+                            dataBuffer.push(item.value);
+                            if (dataBuffer.length > 500) dataBuffer.shift();
+                        }
+                    });
+                    
+                    // 更新最新数据显示
+                    const latest = batch[batch.length - 1];
+                    latestDataEl.textContent = JSON.stringify(latest, null, 2);
+                    
+                    // 绘制波形
+                    drawWaveform();
+                }
+            } catch (e) {
+                addLog(`✗ 数据解析错误: ${e.message}`, 'error');
+                addLog(`原始数据: ${event.data}`, 'error');
+            }
+        };
+        
+        eventSource.onerror = (e) => {
+            statusEl.textContent = '✗ 连接错误';
+            statusEl.style.color = '#f00';
+            addLog('✗ SSE 连接错误', 'error');
+        };
+        
+        function drawWaveform() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (dataBuffer.length < 2) return;
+            
+            ctx.beginPath();
+            const step = canvas.width / dataBuffer.length;
+            const centerY = canvas.height / 2;
+            const scale = canvas.height / 100; // 调整缩放
+            
+            dataBuffer.forEach((val, i) => {
+                const x = i * step;
+                const y = centerY - (val * scale);
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            
+            ctx.strokeStyle = '#0ff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // 中心线
+            ctx.strokeStyle = '#333';
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(canvas.width, centerY);
+            ctx.stroke();
+        }
+        
+        // 定期轮询历史数据（备用方案）
+        setInterval(() => {
+            fetch('/eeg/history')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success && d.data && d.data.values.length > 0) {
+                        addLog(`轮询获取到 ${d.data.values.length} 个历史数据点`, 'success');
+                        dataBuffer = d.data.values.slice(-500);
+                        drawWaveform();
+                    }
+                })
+                .catch(e => addLog(`轮询失败: ${e.message}`, 'error'));
+        }, 2000);
+    </script>
+</body>
+</html>
+

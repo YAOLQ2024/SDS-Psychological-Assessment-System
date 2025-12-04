@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDS 心理测评 - 智能分析终端</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    boxShadow: {
+                        'neon': '0 0 10px rgba(0, 240, 255, 0.3), 0 0 20px rgba(0, 240, 255, 0.1)',
+                        'glow-cyan': '0 0 10px rgba(0, 240, 255, 0.3), inset 0 0 5px rgba(0, 240, 255, 0.1)',
+                    },
+                    animation: {
+                        'scan': 'scan 4s linear infinite',
+                        'spin-slow': 'spin 10s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute; top: 0; left: 5%; width: 90%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute; top: 0; left: 0; width: 100%; height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none; z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute; width: 8px; height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease; opacity: 0.6; z-index: 20; pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket { width: 12px; height: 12px; opacity: 1; box-shadow: 0 0 8px #00f0ff; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #050b14; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+
+        .option-btn {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover {
+            background: rgba(0, 240, 255, 0.1);
+            border-color: rgba(0, 240, 255, 0.6);
+            transform: translateX(4px);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+        .option-selected {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.2), rgba(15, 23, 42, 0.8));
+            border-color: #00f0ff;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), inset 2px 0 0 #00f0ff;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-tech-bg text-sm font-sans selection:bg-tech-primary selection:text-white flex flex-col pb-6">
+
+    <!-- Header -->
+    <header class="h-14 border-b border-tech-primary/20 bg-tech-panel/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="w-full max-w-[1920px] mx-auto h-full px-6 flex items-center justify-between">
+            <div class="flex items-center gap-6">
+                <a href="/main" id="back-btn" class="flex items-center gap-2 text-gray-400 hover:text-tech-primary transition-colors group">
+                    <div class="w-7 h-7 flex items-center justify-center border border-gray-700 rounded group-hover:border-tech-primary group-hover:shadow-neon transition-all">
+                        <i class="fas fa-chevron-left text-xs"></i>
+                    </div>
+                    <span class="font-bold tracking-wider">返回主页</span>
+                </a>
+                <div class="h-5 w-px bg-white/10"></div>
+                <div class="flex items-center gap-3">
+                    <div class="w-7 h-7 rounded bg-gradient-to-br from-tech-primary to-tech-secondary flex items-center justify-center shadow-neon">
+                        <i class="fas fa-brain text-white text-xs"></i>
+                    </div>
+                    <h1 class="text-2xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-tech-primary to-tech-secondary drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]" style="font-family: 'Orbitron', sans-serif;">
+                        SDS <span class="text-lg font-bold not-italic tracking-widest ml-2 text-transparent bg-clip-text bg-gradient-to-r from-tech-primary via-white to-tech-secondary" style="font-family: 'Noto Sans SC', sans-serif; text-shadow: 0 0 15px rgba(0,240,255,0.3);">心理评估系统</span>
+                    </h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 px-3 py-0.5 rounded border border-tech-success/30 bg-tech-success/10">
+                    <div class="w-1.5 h-1.5 rounded-full bg-tech-success animate-pulse"></div>
+                    <span class="text-xs font-mono text-tech-success">系统在线</span>
+                </div>
+                <div class="text-xs font-mono text-gray-500" id="sys-time">00:00:00</div>
+                <div class="w-8 h-8 rounded border border-tech-primary/30 flex items-center justify-center text-tech-primary bg-tech-primary/5 shadow-[0_0_5px_rgba(0,240,255,0.2)]">
+                    <i class="fas fa-wifi"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full max-w-[1920px] mx-auto p-6 flex flex-col gap-6 overflow-hidden h-[calc(100vh-3.5rem)]">
+        
+        <!-- TOP SECTION (Reduced height to 66% to accommodate larger bottom section) -->
+        <div class="grid grid-cols-12 gap-6 h-[66%]">
+            
+            <!-- 1. Left: Emotion Recognition (Col 3) -->
+            <div class="col-span-12 lg:col-span-3 flex flex-col gap-6 h-full">
+                <!-- Video Card -->
+                <div class="cyber-panel panel-3d-top p-1 flex flex-col h-[60%] group relative">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    <div class="px-3 py-2 border-b border-tech-primary/20 flex justify-between items-center bg-tech-panel/50">
+                        <span class="text-xs font-bold text-tech-primary flex items-center gap-2"><i class="fas fa-eye"></i> 表情监测</span>
+                        <span class="px-1.5 py-0.5 rounded bg-tech-primary/20 text-tech-primary text-[10px] font-mono border border-tech-primary/30">NPU 运行中</span>
+                    </div>
+                    <div class="relative flex-1 bg-black group overflow-hidden">
+                        <div class="absolute inset-0 bg-scan-line bg-[length:100%_4px] animate-scan pointer-events-none opacity-20 z-10"></div>
+                        <img src="/emotion/video_stream" id="emotion-video-stream" class="w-full h-full object-cover relative z-0" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 320 240\'%3E%3Crect width=\'320\' height=\'240\' fill=\'%23000\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' fill=\'%23333\' font-family=\'sans-serif\'%3E等待信号%3C/text%3E%3C/svg%3E'">
+                        <div id="emotion-loading-overlay" class="absolute inset-0 bg-black/90 flex items-center justify-center flex-col z-20">
+                            <i class="fas fa-circle-notch fa-spin text-tech-primary text-2xl mb-2"></i>
+                            <span class="text-xs text-tech-primary animate-pulse">正在初始化...</span>
+                        </div>
+                        <div id="emotion-pause-overlay" class="absolute inset-0 bg-black/80 flex items-center justify-center hidden z-20 backdrop-blur-sm">
+                            <div class="text-center"><i class="fas fa-pause text-3xl text-gray-500 mb-2"></i><div class="text-xs text-gray-500">已暂停</div></div>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 to-transparent flex justify-between items-end">
+                            <div><div class="text-[10px] text-gray-400 mb-0.5">主要情绪</div><div class="text-lg font-bold text-white tracking-wider" id="current-emotion">--</div></div>
+                            <div class="text-right"><div class="text-[10px] text-gray-400 mb-0.5">检测帧数</div><div class="text-sm font-mono text-tech-primary" id="detection-count">0</div></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1 p-1 border-t border-tech-primary/20">
+                        <button id="emotion-toggle-btn" class="py-1 bg-white/5 hover:bg-tech-primary/20 text-gray-400 hover:text-tech-primary text-xs rounded transition-colors border border-white/5"><i class="fas fa-pause mr-1"></i> 暂停</button>
+                        <button id="emotion-reset-btn" class="py-1 bg-white/5 hover:bg-tech-primary/20 text-gray-400 hover:text-tech-primary text-xs rounded transition-colors border border-white/5"><i class="fas fa-rotate-right mr-1"></i> 重置</button>
+                    </div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="cyber-panel panel-3d-top p-3 flex-1 flex flex-col group relative">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    <h3 class="text-xs font-bold text-gray-400 tracking-wider mb-3 border-b border-white/10 pb-2 flex justify-between"><span>情绪统计指标</span><i class="fas fa-chart-bar text-tech-secondary"></i></h3>
+                    <div id="emotion-stats" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1"><div class="text-center text-xs text-gray-600 py-4">等待数据...</div></div>
+                </div>
+            </div>
+
+            <!-- 2. Middle: Question & Interaction (Col 6) -->
+            <div class="col-span-12 lg:col-span-6 h-full">
+                <div class="cyber-panel p-0 flex flex-col h-full relative group overflow-hidden shadow-glow-cyan">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-tech-primary via-tech-secondary to-tech-primary z-10"></div>
+                    <div class="px-6 py-3 flex justify-between items-end border-b border-white/5 bg-tech-panel/30">
+                        <div><span class="text-3xl font-bold text-white font-mono tracking-tighter" id="current-question-num">01</span><span class="text-lg text-gray-500 font-mono font-light">/20</span></div>
+                        <div class="flex items-center gap-2"><div class="text-xs text-tech-primary px-2 py-1 bg-tech-primary/10 rounded border border-tech-primary/20">答题面板</div></div>
+                    </div>
+                    <div class="flex-1 flex p-5 gap-5 overflow-hidden">
+                        <div class="w-[280px] flex-shrink-0 flex flex-col gap-3 h-full">
+                            <div class="flex-1 w-full bg-black rounded border border-tech-primary/30 relative overflow-hidden shadow-lg group">
+                                <video id="question-video" class="w-full h-full object-cover" controls playsinline><source src="/static/video/1.mp4" type="video/mp4" id="video-source"></video>
+                                <div class="absolute top-2 left-2 px-2 py-0.5 bg-black/60 backdrop-blur rounded text-[10px] text-white/70 border border-white/10 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div> 题目演示</div>
+                            </div>
+                            <div class="bg-tech-panel/80 border border-white/10 rounded p-2 flex items-center gap-2 relative overflow-hidden shrink-0 h-12">
+                                <button id="voice-button" class="w-8 h-8 rounded flex items-center justify-center bg-tech-primary/20 text-tech-primary hover:bg-tech-primary hover:text-black transition-all shadow-neon"><i class="fas fa-microphone text-xs"></i></button>
+                                <div class="flex-1 overflow-hidden flex flex-col justify-center"><div id="status" class="text-[10px] text-gray-400 truncate">点击语音答题</div></div>
+                                <div id="voice-wave" class="hidden absolute right-2 flex gap-0.5 items-center h-4"><div class="w-0.5 h-full bg-tech-primary animate-pulse"></div><div class="w-0.5 h-2/3 bg-tech-primary animate-pulse delay-75"></div><div class="w-0.5 h-full bg-tech-primary animate-pulse delay-150"></div></div>
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar pr-1">
+                            <div class="mb-3 p-4 bg-gradient-to-r from-tech-primary/10 to-transparent border-l-2 border-tech-primary rounded-r flex-shrink-0"><h2 class="text-lg text-white font-medium leading-relaxed" id="question-text">加载中...</h2></div>
+                            <div class="h-6 w-full flex items-center gap-1 opacity-50 px-4 mb-3 flex-shrink-0">
+                                <div class="w-1 h-2 bg-tech-primary/50 rounded-full animate-pulse"></div><div class="w-1 h-3 bg-tech-primary/50 rounded-full animate-pulse delay-75"></div><div class="w-1 h-4 bg-tech-primary/50 rounded-full animate-pulse delay-150"></div><div class="h-px flex-1 bg-gradient-to-r from-tech-primary/20 to-transparent"></div><div class="text-[10px] text-tech-primary font-mono tracking-[0.2em]">AWAITING RESPONSE</div>
+                            </div>
+                            <div class="flex flex-col gap-3 pb-[3px]">
+                                <button class="option-btn w-full p-3 rounded text-left flex items-center gap-3 group">
+                                    <div class="w-8 h-8 rounded bg-white/5 border border-tech-primary/50 flex items-center justify-center text-tech-primary font-bold text-sm group-hover:border-tech-primary transition-colors">A</div>
+                                    <div><div class="text-gray-200 font-medium text-sm">没有或极少时间</div><div class="text-[10px] text-gray-500">从不或很少有这种感觉</div></div>
+                                </button>
+                                <button class="option-btn w-full p-3 rounded text-left flex items-center gap-3 group">
+                                    <div class="w-8 h-8 rounded bg-white/5 border border-tech-success/50 flex items-center justify-center text-tech-success font-bold text-sm group-hover:border-tech-success transition-colors">B</div>
+                                    <div><div class="text-gray-200 font-medium text-sm">少部分时间</div><div class="text-[10px] text-gray-500">偶尔有这种感觉</div></div>
+                                </button>
+                                <button class="option-btn w-full p-3 rounded text-left flex items-center gap-3 group">
+                                    <div class="w-8 h-8 rounded bg-white/5 border border-yellow-500/50 flex items-center justify-center text-yellow-500 font-bold text-sm group-hover:border-yellow-500 transition-colors">C</div>
+                                    <div><div class="text-gray-200 font-medium text-sm">相当多时间</div><div class="text-[10px] text-gray-500">经常有这种感觉</div></div>
+                                </button>
+                                <button class="option-btn w-full p-3 rounded text-left flex items-center gap-3 group">
+                                    <div class="w-8 h-8 rounded bg-white/5 border border-red-500/50 flex items-center justify-center text-red-500 font-bold text-sm group-hover:border-red-500 transition-colors">D</div>
+                                    <div><div class="text-gray-200 font-medium text-sm">绝大部分或全部时间</div><div class="text-[10px] text-gray-500">总是有这种感觉</div></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 border-t border-white/10 bg-tech-panel/50 flex justify-between items-center">
+                        <button id="prev-button" class="px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-bold tracking-wider transition-all border border-white/5 hover:border-white/20 flex items-center gap-2"><i class="fas fa-arrow-left"></i> 上一题</button>
+                        <div class="h-1.5 w-48 bg-gray-800 rounded-full overflow-hidden mx-4"><div id="progress-bar" class="h-full bg-gradient-to-r from-tech-primary to-tech-secondary transition-all duration-500" style="width: 0%"></div></div>
+                        <button id="next-button" class="px-6 py-2 rounded bg-gradient-to-r from-tech-primary to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold tracking-wider transition-all shadow-neon flex items-center gap-2">下一题 <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Right: Tools (Col 3) - Only 2 Modules -->
+            <div class="col-span-12 lg:col-span-3 flex flex-col gap-3 h-full">
+                
+                <!-- 1. EEG Module (EXPANDED to Fill Space ~63%) -->
+                <div class="cyber-panel panel-3d-top p-0 flex-1 flex flex-col group relative overflow-hidden">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    
+                    <div class="px-3 py-2 border-b border-tech-primary/20 flex justify-between items-center bg-tech-panel/50 z-10 relative">
+                        <span class="text-xs font-bold text-gray-300 tracking-wider flex items-center gap-2">
+                            <i class="fas fa-brain text-tech-primary animate-pulse"></i> 脑机接口监测
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-tech-success animate-pulse"></span>
+                            <span class="text-[9px] font-mono text-tech-success">ACTIVE</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Canvas Container - 三通道独立显示 -->
+                    <div class="flex-1 relative bg-black/80 w-full h-full overflow-hidden flex flex-col gap-2 p-2">
+                         <!-- Hexagon Grid BG -->
+                         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI4Ij48cGF0aCBkPSJNMTAgMjIuNjZMMTAgNiAxMiA1IDE0IDYgMTQgMjIuNjYgMTIgMjMuNjZ6IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMCwgMjQwLCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] bg-[length:30px_30px] opacity-50 animate-pulse-slow"></div>
+                         
+                         <!-- 通道1 -->
+                         <div class="flex-1 relative border border-tech-primary/20 rounded-lg overflow-hidden">
+                             <canvas id="eeg-canvas-ch1" class="w-full h-full block relative z-0"></canvas>
+                         </div>
+                         
+                         <!-- 通道2 -->
+                         <div class="flex-1 relative border border-tech-primary/20 rounded-lg overflow-hidden">
+                             <canvas id="eeg-canvas-ch2" class="w-full h-full block relative z-0"></canvas>
+                         </div>
+                         
+                         <!-- 通道3 -->
+                         <div class="flex-1 relative border border-tech-primary/20 rounded-lg overflow-hidden">
+                             <canvas id="eeg-canvas-ch3" class="w-full h-full block relative z-0"></canvas>
+                         </div>
+                         
+                         <!-- Circular HUD Element -->
+                         <div class="absolute top-4 right-4 w-12 h-12 border border-tech-primary/20 rounded-full animate-spin-slow border-t-tech-primary/80 pointer-events-none"></div>
+                    </div>
+                    
+                    <!-- Bottom Legend with Feature Values (3 Channels) -->
+                    <div class="px-3 py-2 bg-black/60 border-t border-white/10 flex flex-col gap-2 text-[8px] font-mono z-10">
+                        <!-- Channel 1 -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-tech-primary/70">CH1:</span>
+                            <div class="flex gap-4">
+                                <span class="text-tech-primary">Alpha: <span id="eeg-ch1-alpha" class="text-white font-bold">0.00</span></span>
+                                <span class="text-tech-secondary">Beta: <span id="eeg-ch1-beta" class="text-white font-bold">0.00</span></span>
+                                <span class="text-tech-success">Theta: <span id="eeg-ch1-theta" class="text-white font-bold">0.00</span></span>
+                            </div>
+                        </div>
+                        <!-- Channel 2 -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-tech-primary/70">CH2:</span>
+                            <div class="flex gap-4">
+                                <span class="text-tech-primary">Alpha: <span id="eeg-ch2-alpha" class="text-white font-bold">0.00</span></span>
+                                <span class="text-tech-secondary">Beta: <span id="eeg-ch2-beta" class="text-white font-bold">0.00</span></span>
+                                <span class="text-tech-success">Theta: <span id="eeg-ch2-theta" class="text-white font-bold">0.00</span></span>
+                            </div>
+                        </div>
+                        <!-- Channel 3 -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-tech-primary/70">CH3:</span>
+                            <div class="flex gap-4">
+                                <span class="text-tech-primary">Alpha: <span id="eeg-ch3-alpha" class="text-white font-bold">0.00</span></span>
+                                <span class="text-tech-secondary">Beta: <span id="eeg-ch3-beta" class="text-white font-bold">0.00</span></span>
+                                <span class="text-tech-success">Theta: <span id="eeg-ch3-theta" class="text-white font-bold">0.00</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Answer Matrix (35% Height) -->
+                <div class="cyber-panel panel-3d-top p-3 h-[35%] flex flex-col group relative">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+
+                    <h3 class="text-xs font-bold text-gray-400 tracking-wider mb-2 flex items-center gap-2 relative z-10">
+                        <i class="fas fa-th text-tech-secondary"></i> 答题卡
+                    </h3>
+                    <div class="grid grid-cols-5 gap-2 flex-1 content-start overflow-y-auto custom-scrollbar pt-1 relative z-10" id="answer-sheet">
+                        <!-- JS Generated -->
+                    </div>
+                    <div class="mt-auto pt-1 border-t border-white/10 flex justify-between text-[10px] text-gray-500">
+                        <span class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-tech-primary rounded-full shadow-[0_0_5px_cyan]"></div> 当前</span>
+                        <span class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-tech-success rounded-full"></div> 已答</span>
+                        <span class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-white/10 rounded-full"></div> 未答</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- BOTTOM SECTION (Increased to 32%, 4 Columns: Stats, Tips, Actions, PROGRESS) -->
+        <div class="grid grid-cols-4 gap-6 h-[32%] shrink-0">
+            
+            <!-- 1. Quick Stats -->
+            <div class="cyber-panel panel-3d-top p-4 flex flex-col justify-between group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <h3 class="text-[10px] font-bold text-gray-500 tracking-wider mb-2">
+                    <i class="fas fa-chart-pie text-tech-secondary mr-1"></i> 总体统计
+                </h3>
+                <div class="flex-1 flex flex-col justify-center space-y-3">
+                    <div class="flex justify-between items-end">
+                        <span class="text-xs text-gray-400">完成率</span>
+                        <span class="text-xl font-mono text-tech-primary font-bold" id="completion-rate">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                        <div id="completion-bar" class="bg-gradient-to-r from-tech-primary to-tech-secondary h-full transition-all relative" style="width: 0%">
+                             <div class="absolute right-0 top-0 bottom-0 w-1 bg-white animate-pulse"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-end mt-1 pt-2 border-t border-white/5">
+                        <span class="text-xs text-gray-400">语音交互</span>
+                        <span class="text-sm font-mono text-white" id="voice-usage">0次</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Health Tips -->
+            <div class="cyber-panel panel-3d-top p-4 bg-gradient-to-br from-tech-panel to-tech-success/5 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <h3 class="text-[10px] font-bold text-gray-500 tracking-wider mb-2">
+                    <i class="fas fa-heartbeat text-tech-success mr-1"></i> 健康小贴士
+                </h3>
+                <div class="flex-1 flex flex-col justify-center">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-quote-left text-tech-success/30 text-xl"></i>
+                        <p class="text-xs text-gray-300 leading-relaxed opacity-90">
+                            保持深呼吸，放松心情。如果您在答题过程中感到焦虑或不适，可以随时点击暂停按钮休息片刻。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Quick Actions -->
+            <div class="cyber-panel panel-3d-top p-4 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <h3 class="text-[10px] font-bold text-gray-500 tracking-wider mb-2">
+                    <i class="fas fa-bolt text-yellow-500 mr-1"></i> 快捷操作
+                </h3>
+                <div class="grid grid-cols-1 gap-3 h-full pb-2 content-center">
+                    <button id="jump-to-question" class="h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs text-gray-300 flex items-center justify-center gap-3 transition-colors hover:border-tech-primary/50 group/btn">
+                        <i class="fas fa-search text-tech-primary group-hover/btn:scale-110 transition-transform"></i> 
+                        <span class="font-mono">JUMP_TO_QUESTION</span>
+                    </button>
+                    <button id="auto-play-all" class="h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs text-gray-300 flex items-center justify-center gap-3 transition-colors hover:border-tech-secondary/50 group/btn">
+                        <i class="fas fa-play-circle text-tech-secondary group-hover/btn:scale-110 transition-transform"></i>
+                        <span class="font-mono">AUTO_PLAY_DEMO</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. Progress Stats (MOVED HERE) -->
+            <div class="cyber-panel panel-3d-top p-4 group relative flex flex-col">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <h3 class="text-[10px] font-bold text-gray-500 tracking-wider mb-2 flex justify-between items-center">
+                    <span><i class="fas fa-clock text-tech-warning mr-1"></i> 测评进度</span>
+                    <span class="w-2 h-2 rounded-full bg-tech-warning animate-pulse"></span>
+                </h3>
+                
+                <div class="flex-1 flex flex-col justify-center space-y-4">
+                    <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                        <span class="text-xs text-gray-400">已用时间</span>
+                        <span class="text-2xl font-mono text-white font-bold" id="total-time">00:00</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-gray-500">预计剩余</span>
+                            <span class="text-sm font-mono text-tech-warning" id="remaining-time">60:00</span>
+                        </div>
+                        <div class="w-px h-8 bg-white/10"></div>
+                        <div class="flex flex-col items-end">
+                            <span class="text-[10px] text-gray-500">平均耗时</span>
+                            <span class="text-sm font-mono text-tech-success" id="avg-time">0s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Hidden Data Holders -->
+    <div id="answered-count" class="hidden"></div>
+    <div id="current-dominant-emotion" class="hidden"></div>
+    <div id="total-detections" class="hidden"></div>
+
+    <!-- JS Logic -->
+    <script>
+        // === Core Variables ===
+        const optionValues = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+        let currentQuestion = 1;
+        const totalQuestions = 20;
+        let answers = {};
+        let startTime = null;
+        let timerInterval = null;
+        let totalTime = 0;
+        let emotionData = { detections: [], summary: {} };
+        let isEmotionDetectionRunning = true;
+        let emotionStatsInterval = null;
+        let emotionStreamReady = false;
+        let recognition;
+        let isRecording = false;
+
+        const questionTexts = [
+            "您是否感到情绪沮丧，郁闷？", "您是否感到早晨心情最好？", "您是否要哭或想哭？",
+            "您是否夜间睡眠不好？", "您是否吃饭像平常一样多？", "您的性功能是否正常？",
+            "您是否感到体重减轻？", "您是否为便秘烦恼？", "您的心跳是否比平时快？",
+            "您是否无故感到疲乏？", "您的头脑是否像平常一样清楚？", "您做事情是否像平常一样不感到困难？",
+            "您是否坐卧难安，难以保持平静？", "您是否对未来感到有希望？", "您是否比平时更容易激怒？",
+            "您是否觉得决定什么事很容易？", "您是否感到自己是有用的和不可缺少的人？", "您的生活是否很有意思？",
+            "您是否觉得假若您死了，别人会过得更好？", "您是否仍旧喜欢自己平时喜欢的东西？"
+        ];
+
+        const emotionChinese = {
+            'angry': '愤怒', 'disgust': '厌恶', 'fear': '害怕',
+            'happy': '高兴', 'neutral': '自然', 'sad': '悲伤', 
+            'surprise': '惊讶', 'surprised': '惊讶'
+        };
+        
+        // Progress Bar Colors for Emotions
+        const emotionColors = {
+            'happy': 'bg-tech-success',
+            'neutral': 'bg-gray-400',
+            'sad': 'bg-blue-500',
+            'angry': 'bg-tech-danger',
+            'fear': 'bg-purple-500',
+            'surprise': 'bg-tech-warning',
+            'disgust': 'bg-green-600'
+        };
+
+        // === Init ===
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('SYSTEM START');
+            
+            setInterval(() => {
+                document.getElementById('sys-time').textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            }, 1000);
+
+            startTimer();
+            initOptionButtons();
+            initAnswerSheet();
+            initButtonEvents();
+            initVoiceRecognition();
+            initEmotionRecognition();
+            initQuickActions();
+            initEEG(); // Initialize New EEG
+            
+            updateQuestionCounter();
+            updateAssessmentStats();
+            
+            // Stream Check
+            const v = document.getElementById('question-video');
+            v.load();
+            
+            let checkCount = 0;
+            const checkInt = setInterval(() => {
+                checkCount++;
+                const img = document.getElementById('emotion-video-stream');
+                if (img.naturalWidth > 0) {
+                    clearInterval(checkInt);
+                    emotionStreamReady = true;
+                    document.getElementById('emotion-loading-overlay').classList.add('hidden');
+                    v.play().then(() => {
+                        console.log('[Video] 答题视频同步播放成功');
+                    }).catch(err => {
+                        console.log('[Video] 答题视频播放失败:', err);
+                    });
+                }
+                if (checkCount > 15) {
+                    clearInterval(checkInt);
+                    document.getElementById('emotion-loading-overlay').classList.add('hidden');
+                    v.play().catch(() => {});
+                }
+            }, 200);
+        });
+
+        // === Cleanup ===
+        window.addEventListener('beforeunload', () => {
+            if(timerInterval) clearInterval(timerInterval);
+            if(emotionStatsInterval) clearInterval(emotionStatsInterval);
+            fetch('/emotion/stop_stream', { method: 'POST', keepalive: true }).catch(()=>{});
+        });
+
+        document.getElementById('back-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            if(timerInterval) clearInterval(timerInterval);
+            if(emotionStatsInterval) clearInterval(emotionStatsInterval);
+            fetch('/emotion/stop_stream', { method: 'POST' }).finally(() => window.location.href = '/main');
+        });
+
+        // === NEW: SCI-FI EEG Visualization Logic V4 (三通道独立显示) ===
+        // === EEG Visualization (Real Data from Serial - 3 Channels) ===
+        let eegChannelsData = {
+            1: { waveform: [], features: { current: { theta: 0, alpha: 0, beta: 0, timestamp: 0 } } },
+            2: { waveform: [], features: { current: { theta: 0, alpha: 0, beta: 0, timestamp: 0 } } },
+            3: { waveform: [], features: { current: { theta: 0, alpha: 0, beta: 0, timestamp: 0 } } }
+        };
+        let useRealData = false;
+        
+        function initEEG() {
+            console.log('[EEG] 初始化三通道脑电图显示');
+            
+            // 初始化三个Canvas
+            const channels = [1, 2, 3];
+            channels.forEach(ch => {
+                const canvas = document.getElementById(`eeg-canvas-ch${ch}`);
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                let width, height;
+                
+                const resize = () => {
+                    width = canvas.width = canvas.parentElement.offsetWidth;
+                    height = canvas.height = canvas.parentElement.offsetHeight;
+                };
+                window.addEventListener('resize', resize);
+                resize();
+                
+                // Fallback: 模拟数据参数
+                const waves = [
+                    { color: '#00f0ff', freq: 0.02, amp: 30, speed: 0.2, phase: ch * 100 }, 
+                    { color: '#d946ef', freq: 0.05, amp: 15, speed: 0.3, phase: ch * 150 }, 
+                    { color: '#05ffa1', freq: 0.01, amp: 40, speed: 0.1, phase: ch * 200 } 
+                ];
+                
+                let time = 0;
+                
+                function draw() {
+                    ctx.fillStyle = 'rgba(5, 11, 20, 0.3)'; 
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    const channelData = eegChannelsData[ch];
+                    const hasWaveform = channelData.waveform && channelData.waveform.length > 10;
+                    
+                    // 调试信息（每5秒打印一次）
+                    if (time % 300 === 0) {
+                        console.log(`[EEG] 通道${ch}绘制状态:`, {
+                            useRealData: useRealData,
+                            waveform_len: channelData.waveform?.length || 0,
+                            features_theta_len: channelData.features?.theta?.length || 0,
+                            features_alpha_len: channelData.features?.alpha?.length || 0,
+                            features_beta_len: channelData.features?.beta?.length || 0,
+                            willDrawReal: hasWaveform
+                        });
+                    }
+                    
+                    if (useRealData && hasWaveform) {
+                        // 绘制真实脑电数据
+                        drawChannelWaveform(ctx, width, height, channelData, ch);
+                    } else {
+                        // 绘制模拟数据（等待真实数据）
+                        drawSimulatedEEG(ctx, width, height, waves, time);
+                    }
+                    
+                    time += 1;
+                    requestAnimationFrame(draw);
+                }
+                draw();
+            });
+            
+            // 连接数据流
+            fetchEEGHistory();
+            setInterval(fetchEEGHistory, 1000); // 每秒更新一次
+        }
+        
+        function fetchEEGHistory() {
+            fetch('/eeg/channels')
+                .then(r => r.json())
+                .then(d => {
+                    console.log('[EEG] API响应:', d);
+                    if (d.success && d.data) {
+                        const data = d.data;
+                        let hasData = false;
+                        
+                        // 更新三个通道的数据
+                        [1, 2, 3].forEach(ch => {
+                            const channelKey = `channel${ch}`;
+                            if (data[channelKey]) {
+                                const chData = data[channelKey];
+                                
+                                console.log(`[EEG] 通道${ch}数据:`, {
+                                    waveform_len: chData.waveform?.length || 0,
+                                    features_theta_len: chData.features?.history?.theta?.length || 0,
+                                    features_alpha_len: chData.features?.history?.alpha?.length || 0,
+                                    features_beta_len: chData.features?.history?.beta?.length || 0
+                                });
+                                
+                                // 更新波形数据（降采样后的原始数据）
+                                if (chData.waveform && Array.isArray(chData.waveform) && chData.waveform.length > 0) {
+                                    eegChannelsData[ch].waveform = chData.waveform;
+                                    hasData = true;
+                                    console.log(`[EEG] ✓ 通道${ch}波形数据已更新: ${chData.waveform.length}个数据点`);
+                                }
+                                
+                                // 更新特征数据（每个通道独立显示）
+                                if (chData.features && chData.features.current) {
+                                    const current = chData.features.current;
+                                    
+                                    // 更新对应通道的底部图例显示
+                                    if (current.alpha !== undefined && current.alpha !== null) {
+                                        const alphaEl = document.getElementById(`eeg-ch${ch}-alpha`);
+                                        if (alphaEl) alphaEl.textContent = current.alpha.toFixed(2);
+                                    }
+                                    if (current.beta !== undefined && current.beta !== null) {
+                                        const betaEl = document.getElementById(`eeg-ch${ch}-beta`);
+                                        if (betaEl) betaEl.textContent = current.beta.toFixed(2);
+                                    }
+                                    if (current.theta !== undefined && current.theta !== null) {
+                                        const thetaEl = document.getElementById(`eeg-ch${ch}-theta`);
+                                        if (thetaEl) thetaEl.textContent = current.theta.toFixed(2);
+                                    }
+                                    
+                                    console.log(`[EEG] ✓ 通道${ch}特征值已更新: Theta=${current.theta.toFixed(2)}, Alpha=${current.alpha.toFixed(2)}, Beta=${current.beta.toFixed(2)}`);
+                                }
+                            } else {
+                                console.warn(`[EEG] 通道${ch}数据不存在`);
+                            }
+                        });
+                        
+                        if (hasData) {
+                            useRealData = true;
+                            console.log('[EEG] ✓ 已切换到真实数据模式');
+                        } else {
+                            console.warn('[EEG] ⚠ 未检测到有效数据，继续使用模拟数据');
+                        }
+                    } else {
+                        console.warn('[EEG] API返回失败或无数据:', d);
+                    }
+                })
+                .catch(e => {
+                    console.error('[EEG] ✗ 获取通道数据失败:', e);
+                });
+        }
+        
+        function drawChannelWaveform(ctx, width, height, channelData, channelNum) {
+            const waveform = channelData.waveform;
+            if (waveform.length < 2) return;
+            
+            // 只取最近的200个数据点用于显示
+            const displayWaveform = waveform.slice(-200);
+            
+            // 自动归一化波形数据
+            const waveMin = Math.min(...displayWaveform);
+            const waveMax = Math.max(...displayWaveform);
+            const waveRange = waveMax - waveMin || 1;
+            
+            const centerY = height / 2;
+            const waveAmplitude = height * 0.35; // 主波形使用35%高度
+            
+            // === 1. 绘制主波形（原始数据，降采样后）===
+            ctx.beginPath();
+            const step = width / displayWaveform.length;
+            
+            displayWaveform.forEach((val, i) => {
+                const x = i * step;
+                const normalized = ((val - waveMin) / waveRange) * 2 - 1;
+                const y = centerY - (normalized * waveAmplitude);
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.9)';
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(0, 240, 255, 0.6)';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // === 2. 特征值不再在画布上显示，统一在底部图例显示 ===
+            
+            // === 3. 绘制中心参考线 ===
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(width, centerY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // === 4. 显示数据信息 ===
+            ctx.fillStyle = 'rgba(0, 240, 255, 0.6)';
+            ctx.font = '9px "JetBrains Mono", monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`CH${channelNum} | 范围: ${waveMin.toFixed(2)} ~ ${waveMax.toFixed(2)}`, width - 10, 15);
+            ctx.fillText(`数据点: ${displayWaveform.length}`, width - 10, 28);
+        }
+        
+        function drawSimulatedEEG(ctx, width, height, waves, time) {
+            // 模拟数据绘制（原有逻辑）
+            ctx.globalCompositeOperation = 'screen';
+            waves.forEach((w, i) => {
+                ctx.beginPath();
+                const yOffset = height / 2 + (i-1) * 30; 
+                
+                for(let x = 0; x < width; x+=5) {
+                    const noise = (Math.random() - 0.5) * 4; 
+                    const glitch = Math.random() > 0.995 ? (Math.random()-0.5) * 40 : 0;
+                    const y = yOffset + Math.sin((x * 0.01) * w.freq * 100 + time * w.speed + w.phase) * w.amp + noise + glitch;
+                    
+                    if(x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                
+                ctx.strokeStyle = w.color;
+                ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = w.color;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            });
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // 显示等待文字
+            ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
+            ctx.font = '11px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('等待脑电信号...', width / 2, height - 15);
+        }
+
+        // === Emotion ===
+        function initEmotionRecognition() {
+            const toggleBtn = document.getElementById('emotion-toggle-btn');
+            const img = document.getElementById('emotion-video-stream');
+            const overlay = document.getElementById('emotion-pause-overlay');
+            
+            toggleBtn.onclick = () => {
+                isEmotionDetectionRunning = !isEmotionDetectionRunning;
+                if (isEmotionDetectionRunning) {
+                    img.style.opacity = '1';
+                    overlay.classList.add('hidden');
+                    toggleBtn.innerHTML = '<i class="fas fa-pause mr-1"></i> 暂停';
+                    startStats();
+                } else {
+                    img.style.opacity = '0.3';
+                    overlay.classList.remove('hidden');
+                    toggleBtn.innerHTML = '<i class="fas fa-play mr-1"></i> 继续';
+                    stopStats();
+                }
+            };
+            
+            document.getElementById('emotion-reset-btn').onclick = () => {
+                fetch('/emotion/reset', { method: 'POST' }).then(r => r.json()).then(d => {
+                    if(d.success) updateStats();
+                });
+            };
+            
+            startStats();
+        }
+
+        function startStats() {
+            if(emotionStatsInterval) clearInterval(emotionStatsInterval);
+            updateStats();
+            emotionStatsInterval = setInterval(updateStats, 1000);
+        }
+
+        function stopStats() {
+            if(emotionStatsInterval) clearInterval(emotionStatsInterval);
+            emotionStatsInterval = null;
+        }
+
+        function updateStats() {
+            if (!isEmotionDetectionRunning) return;
+            fetch('/emotion/statistics').then(r=>r.json()).then(d => {
+                if(d.success && d.data) {
+                    const stats = d.data;
+                    document.getElementById('current-emotion').textContent = (emotionChinese[stats.most_common] || stats.most_common).toUpperCase();
+                    document.getElementById('detection-count').textContent = stats.total_detections || 0;
+                    updateStatsList(stats.emotions || {});
+                    emotionData.summary = stats;
+                }
+            });
+        }
+
+        function updateStatsList(emotions) {
+            const div = document.getElementById('emotion-stats');
+            const order = ['happy', 'neutral', 'sad', 'angry', 'fear', 'surprise', 'disgust'];
+            div.innerHTML = order.map(e => {
+                const p = (emotions[e]?.percentage || 0);
+                const bgClass = p > 0 ? (emotionColors[e] || 'bg-tech-primary') : 'bg-gray-700';
+                const textClass = (emotionColors[e] || 'text-gray-400').replace('bg-', 'text-');
+                const finalTextClass = p > 0 ? textClass : 'text-gray-500';
+                
+                const label = emotionChinese[e] || e;
+                return `
+                    <div class="flex items-center gap-2 text-xs font-medium">
+                        <div class="w-10 ${finalTextClass} text-right font-bold transition-colors duration-300">${label}</div>
+                        <div class="flex-1 bg-white/5 rounded-sm h-2 overflow-hidden">
+                            <div class="${bgClass} h-full transition-all duration-300" style="width: ${p}%"></div>
+                        </div>
+                        <div class="w-8 text-white text-right font-mono">${Math.round(p)}%</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // === Voice ===
+        let voiceTimeout = null;
+        
+        function initVoiceRecognition() {
+            const btn = document.getElementById('voice-button');
+            const status = document.getElementById('status');
+            const wave = document.getElementById('voice-wave');
+            
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = false; // 改为单次识别
+                recognition.lang = 'zh-CN';
+                recognition.interimResults = true; // 显示临时结果
+                
+                let finalTranscript = '';
+                
+                recognition.onstart = () => {
+                    isRecording = true;
+                    finalTranscript = '';
+                    btn.classList.add('bg-red-500', 'text-white', 'animate-pulse');
+                    btn.classList.remove('bg-tech-primary/20', 'text-tech-primary');
+                    status.textContent = '识别中...';
+                    status.className = 'text-[10px] text-tech-primary truncate animate-pulse';
+                    wave.classList.remove('hidden');
+                    
+                    if(voiceTimeout) clearTimeout(voiceTimeout);
+                    voiceTimeout = setTimeout(() => {
+                        if(isRecording) {
+                            recognition.stop();
+                        }
+                    }, 5000);
+                };
+                
+                recognition.onresult = (e) => {
+                    let interimTranscript = '';
+                    for (let i = e.resultIndex; i < e.results.length; i++) {
+                        if (e.results[i].isFinal) {
+                            finalTranscript += e.results[i][0].transcript;
+                        } else {
+                            interimTranscript += e.results[i][0].transcript;
+                        }
+                    }
+                    const displayText = finalTranscript || interimTranscript;
+                    if(displayText) {
+                        status.textContent = `识别中: ${displayText}`;
+                    }
+                };
+                
+                recognition.onend = () => {
+                    isRecording = false;
+                    if(voiceTimeout) clearTimeout(voiceTimeout);
+                    
+                    if(finalTranscript.trim()) {
+                        sendVoice(finalTranscript.trim());
+                    } else {
+                        status.textContent = '未识别到内容';
+                        status.className = 'text-[10px] text-yellow-500 truncate';
+                        setTimeout(() => resetVoice(), 2000);
+                    }
+                };
+                
+                recognition.onerror = (e) => {
+                    console.error('语音识别错误:', e.error);
+                    isRecording = false;
+                    if(voiceTimeout) clearTimeout(voiceTimeout);
+                    status.textContent = '识别失败';
+                    status.className = 'text-[10px] text-red-500 truncate';
+                    setTimeout(() => resetVoice(), 2000);
+                };
+                
+                btn.onclick = () => {
+                    if(!isRecording) {
+                        try {
+                            recognition.start();
+                        } catch(e) {
+                            console.error('启动识别失败:', e);
+                        }
+                    }
+                };
+            } else {
+                status.textContent = '无麦克风';
+                btn.disabled = true;
+                btn.classList.add('opacity-50');
+            }
+        }
+
+        function resetVoice() {
+            const btn = document.getElementById('voice-button');
+            const status = document.getElementById('status');
+            const wave = document.getElementById('voice-wave');
+            isRecording = false;
+            btn.classList.remove('bg-red-500', 'text-white', 'animate-pulse');
+            btn.classList.add('bg-tech-primary/20', 'text-tech-primary');
+            status.textContent = '点击语音答题';
+            status.className = 'text-[10px] text-gray-400 truncate';
+            wave.classList.add('hidden');
+        }
+
+        function sendVoice(txt) {
+            const status = document.getElementById('status');
+            const answer = matchVoiceToOption(txt);
+            
+            if(answer) {
+                selectOption(answer, '', true);
+                status.textContent = `识别: ${answer} - ${txt}`;
+                status.className = 'text-[10px] text-tech-success truncate';
+                setTimeout(() => {
+                    resetVoice();
+                    if(currentQuestion < totalQuestions) loadQuestion(currentQuestion + 1);
+                    else if(Object.keys(answers).length === totalQuestions) submitAssessment(true);
+                }, 1500);
+            } else {
+                status.textContent = `无法识别: ${txt}`;
+                status.className = 'text-[10px] text-yellow-500 truncate';
+                setTimeout(() => resetVoice(), 2000);
+            }
+        }
+        
+        function matchVoiceToOption(text) {
+            const t = text.toLowerCase().replace(/\s+/g, '');
+            const aKeywords = ['没有', '极少', '不', '否', '不可能', '从不', '很少', '选a', '选择a', 'a', '第一个', '第一项', '一', '第1个', '第1项', '1', '选1'];
+            const bKeywords = ['少部分', '偶尔', '有时', '少', '选b', '选择b', 'b', '第二个', '第二项', '二', '第2个', '第2项', '2', '选2'];
+            const cKeywords = ['相当多', '经常', '常有', '多', '选c', '选择c', 'c', '第三个', '第三项', '三', '第3个', '第3项', '3', '选3'];
+            const dKeywords = ['绝大部分', '全部', '总是', '一直', '选d', '选择d', 'd', '得', '的', '第四个', '第四项', '四', '第4个', '第4项', '4', '选4', '选的', '选地'];
+            
+            if (/[选]?[ad]$|[选]?[的得地]$/.test(t) || t === 'a' || t === 'd' || t === '的' || t === '得' || t === '地') {
+                if (t.includes('d') || t === '的' || t === '得' || t === '地' || t.includes('的') || t.includes('得') || t.includes('地')) return 'D';
+                if (t.includes('a')) return 'A';
+            }
+            if (/[选]?[bc]$/.test(t) || t === 'b' || t === 'c') {
+                if (t.includes('c')) return 'C';
+                if (t.includes('b')) return 'B';
+            }
+            if (t === '1' || t === '一' || t.includes('第一') || t.includes('选1')) return 'A';
+            if (t === '2' || t === '二' || t.includes('第二') || t.includes('选2')) return 'B';
+            if (t === '3' || t === '三' || t.includes('第三') || t.includes('选3')) return 'C';
+            if (t === '4' || t === '四' || t.includes('第四') || t.includes('选4')) return 'D';
+            
+            for (let kw of dKeywords) { if (t.includes(kw)) return 'D'; }
+            for (let kw of cKeywords) { if (t.includes(kw)) return 'C'; }
+            for (let kw of bKeywords) { if (t.includes(kw)) return 'B'; }
+            for (let kw of aKeywords) { if (t.includes(kw)) return 'A'; }
+            return null;
+        }
+
+        // === Quiz Logic ===
+        function selectOption(key, src, isVoice) {
+            document.querySelectorAll('.option-btn').forEach(b => {
+                b.classList.remove('option-selected');
+                if(b.innerText.includes(key)) b.classList.add('option-selected');
+            });
+            answers[currentQuestion] = { option: key, value: optionValues[key], source: isVoice ? 'voice' : 'manual' };
+            updateMatrix();
+            updateAssessmentStats();
+        }
+
+        function initOptionButtons() {
+            document.querySelectorAll('.option-btn').forEach(b => {
+                b.onclick = () => {
+                    const key = b.querySelector('div').textContent.trim();
+                    selectOption(key, '', false);
+                    if(currentQuestion < totalQuestions) setTimeout(() => loadQuestion(currentQuestion + 1), 500);
+                    else if(Object.keys(answers).length === totalQuestions) setTimeout(() => submitAssessment(true), 1500);
+                };
+            });
+        }
+
+        function initAnswerSheet() {
+            const div = document.getElementById('answer-sheet');
+            div.innerHTML = '';
+            for(let i=1; i<=totalQuestions; i++) {
+                const b = document.createElement('button');
+                b.className = `h-6 w-full rounded bg-white/5 border border-white/10 text-[10px] font-mono text-gray-500 hover:border-tech-primary/50 transition-all ${i===currentQuestion ? 'border-tech-primary text-white shadow-neon' : ''}`;
+                b.textContent = i.toString().padStart(2, '0');
+                b.onclick = () => loadQuestion(i);
+                div.appendChild(b);
+            }
+        }
+
+        function updateMatrix() {
+            const btns = document.getElementById('answer-sheet').children;
+            for(let i=0; i<btns.length; i++) {
+                const q = i+1;
+                let cls = 'h-6 w-full rounded text-[10px] font-mono transition-all border ';
+                if(q===currentQuestion) cls += 'bg-tech-primary/20 border-tech-primary text-white shadow-neon z-10 scale-105';
+                else if(answers[q]) cls += 'bg-tech-success/10 border-tech-success/50 text-tech-success';
+                else cls += 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10';
+                btns[i].className = cls;
+            }
+        }
+
+        function updateQuestionCounter() {
+            document.getElementById('current-question-num').textContent = currentQuestion.toString().padStart(2, '0');
+            const v = document.getElementById('question-video');
+            document.getElementById('video-source').src = `/static/video/${currentQuestion}.mp4`;
+            v.load();
+            setTimeout(() => {
+                v.play().then(() => {
+                    console.log('[Video] 视频自动播放成功');
+                }).catch(err => {
+                    console.log('[Video] 视频自动播放失败:', err);
+                });
+            }, 300);
+            
+            document.getElementById('question-text').textContent = questionTexts[currentQuestion-1];
+            document.getElementById('progress-bar').style.width = `${(Object.keys(answers).length/totalQuestions)*100}%`;
+        }
+
+        function loadQuestion(n) {
+            currentQuestion = n;
+            updateQuestionCounter();
+            updateMatrix();
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('option-selected'));
+            if(answers[n]) {
+                const k = answers[n].option;
+                document.querySelectorAll('.option-btn').forEach(b => {
+                    if(b.querySelector('div').textContent.trim() === k) b.classList.add('option-selected');
+                });
+            }
+        }
+
+        function initButtonEvents() {
+            document.getElementById('prev-button').onclick = () => { if(currentQuestion>1) loadQuestion(currentQuestion-1); };
+            document.getElementById('next-button').onclick = () => {
+                if(currentQuestion<totalQuestions) loadQuestion(currentQuestion+1);
+                else alert('已经是最后一题');
+            };
+        }
+
+        function initQuickActions() {
+            document.getElementById('jump-to-question').onclick = () => {
+                const n = prompt('跳转到 (1-20):');
+                if(n && !isNaN(n) && n>=1 && n<=20) loadQuestion(parseInt(n));
+            };
+            document.getElementById('auto-play-all').onclick = () => {
+                if(confirm('自动播放所有视频?')) {
+                    let i = 1;
+                    const play = () => {
+                        if(i<=20) {
+                            loadQuestion(i);
+                            const v = document.getElementById('question-video');
+                            v.play();
+                            v.onended = () => { i++; setTimeout(play, 1000); };
+                        }
+                    };
+                    play();
+                }
+            };
+        }
+
+        // === Timer & Submit ===
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                totalTime = Math.floor((Date.now()-startTime)/1000);
+                
+                const mins = Math.floor(totalTime / 60).toString().padStart(2, '0');
+                const secs = (totalTime % 60).toString().padStart(2, '0');
+                document.getElementById('total-time').textContent = `${mins}:${secs}`;
+                
+                // Remaining
+                const left = 3600 - totalTime;
+                if (left <= 0) {
+                    clearInterval(timerInterval);
+                    submitAssessment(true);
+                }
+                const lMins = Math.floor(left / 60).toString().padStart(2, '0');
+                const lSecs = (left % 60).toString().padStart(2, '0');
+                document.getElementById('remaining-time').textContent = `${lMins}:${lSecs}`;
+
+            }, 1000);
+        }
+        
+        function updateAssessmentStats() {
+             const answeredCount = Object.keys(answers).length;
+             if (answeredCount > 0) {
+                const avg = Math.round(totalTime / answeredCount);
+                document.getElementById('avg-time').textContent = `${avg}秒`;
+            }
+            // Update Bottom Stats
+            const progress = (answeredCount / totalQuestions) * 100;
+            document.getElementById('completion-rate').textContent = `${Math.round(progress)}%`;
+            document.getElementById('completion-bar').style.width = `${progress}%`;
+            
+            const voiceCount = Object.values(answers).filter(a => a.source === 'voice').length;
+            document.getElementById('voice-usage').textContent = `${voiceCount}次`;
+        }
+
+        function submitAssessment(force=false) {
+            if(!force && Object.keys(answers).length < totalQuestions) {
+                if(!confirm(`还有题目未完成，确定提交吗？`)) return;
+            }
+            
+            clearInterval(timerInterval);
+            stopStats();
+            
+            fetch('/emotion/statistics').then(r=>r.json()).then(d => { if(d.success) emotionData.summary = d.data; })
+            .finally(() => {
+                fetch('/SDS/submit_with_emotion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answers, totalTime, emotionData })
+                }).then(r=>r.json()).then(d => {
+                    if(d.success) showResult(d);
+                    else alert(d.error);
+                });
+            });
+        }
+
+        function showResult(data) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-[100] bg-black/90 backdrop-blur flex items-center justify-center p-4';
+            const testId = data.assessment_id || '';
+            
+            modal.innerHTML = `
+                <div class="cyber-panel w-full max-w-md p-8 text-center border-tech-primary shadow-neon relative group">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    
+                    <i class="fas fa-check-circle text-5xl text-tech-primary mb-4 animate-bounce"></i>
+                    <h2 class="text-2xl font-bold text-white mb-2 tracking-widest">测评完成</h2>
+                    <p class="text-gray-400 text-sm font-mono mt-2">评估报告已生成</p>
+                    <div class="my-6 bg-white/5 p-4 rounded border border-white/10">
+                        <div class="text-xs text-gray-400 font-mono mb-1">综合评分</div>
+                        <div class="text-5xl font-bold text-tech-primary font-mono mb-2">${data.comprehensive_score ? data.comprehensive_score.toFixed(1) : data.sds_score}</div>
+                        <div class="text-lg text-white font-bold">${data.result}</div>
+                    </div>
+                    <div class="space-y-3">
+                        <form action="/comprehensive-detail" method="POST" style="margin: 0;">
+                            <input type="hidden" name="test_id" value="${testId}">
+                            <button type="submit" class="w-full py-3 bg-tech-primary text-black font-bold rounded hover:bg-white transition-all shadow-neon">查看综合分析报告</button>
+                        </form>
+                        <button onclick="window.location.href='/history'" class="w-full py-3 border border-white/20 text-gray-300 hover:text-white hover:border-white hover:bg-white/5 rounded font-mono text-sm transition-all">返回历史记录</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>

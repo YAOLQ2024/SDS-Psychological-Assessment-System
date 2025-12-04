@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提交成功 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-tech-primary selection:text-black pb-6">
+    
+    <!-- Background Scan Line -->
+    <div class="fixed inset-0 pointer-events-none opacity-10 bg-scan-line animate-scan z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="h-16 border-b border-tech-primary/20 bg-tech-panel/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="w-full max-w-[1920px] mx-auto h-full px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-tech-primary to-tech-secondary rounded flex items-center justify-center shadow-neon">
+                    <i class="fas fa-check text-white text-xs"></i>
+                </div>
+                <span class="text-xl font-bold font-tech text-white tracking-wider">提交完成</span>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-0.5 rounded border border-tech-success/30 bg-tech-success/10">
+                <i class="fas fa-check-circle text-tech-success text-xs"></i>
+                <span class="text-xs font-mono text-tech-success">数据已加密</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex items-center justify-center p-6 relative z-10">
+        <div class="w-full max-w-lg">
+            <div class="cyber-panel panel-3d-top p-12 text-center group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="w-24 h-24 mx-auto mb-8 bg-tech-success/10 rounded-full flex items-center justify-center border border-tech-success/50 shadow-[0_0_20px_rgba(5,255,161,0.3)] animate-pulse-slow">
+                    <i class="fas fa-check text-tech-success text-4xl"></i>
+                </div>
+                
+                <h1 class="text-3xl font-bold text-white mb-4 font-tech tracking-wider">测评已上传</h1>
+                <p class="text-gray-400 mb-8 font-mono">您的 SDS 评估数据已成功处理并加密。</p>
+                
+                <div class="bg-white/5 border border-white/10 rounded-lg p-4 mb-8">
+                    <p class="text-xs text-tech-primary font-mono">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        报告已生成并可供查看
+                    </p>
+                </div>
+
+                <div class="space-y-4">
+                    <button onclick="viewComprehensiveScore()" class="w-full py-4 bg-tech-primary hover:bg-white text-black font-bold font-mono rounded shadow-neon transition-all hover:scale-105 flex items-center justify-center gap-3">
+                        <i class="fas fa-chart-line"></i>
+                        查看结果
+                    </button>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="window.location.href='/main'" class="py-3 border border-white/20 text-gray-300 hover:text-white hover:border-white hover:bg-white/5 rounded font-mono text-sm transition-all">
+                            <i class="fas fa-home mr-2"></i> 仪表板
+                        </button>
+                        <button onclick="window.location.href='/history'" class="py-3 border border-white/20 text-gray-300 hover:text-white hover:border-white hover:bg-white/5 rounded font-mono text-sm transition-all">
+                            <i class="fas fa-history mr-2"></i> 历史记录
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-8 text-gray-600 text-[10px] font-mono tracking-widest">
+                <span class="mx-2"><i class="fas fa-lock text-tech-secondary"></i> 已加密</span>
+                <span class="mx-2"><i class="fas fa-robot text-tech-primary"></i> AI 分析</span>
+                <span class="mx-2"><i class="fas fa-shield-alt text-tech-success"></i> 安全存储</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function viewComprehensiveScore() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const assessmentId = urlParams.get('id');
+            if (assessmentId) {
+                window.location.href = `/comprehensive-detail?test_id=${assessmentId}`;
+            } else {
+                window.location.href = '/history';
+            }
+        }
+    </script>
+</body>
+</html>

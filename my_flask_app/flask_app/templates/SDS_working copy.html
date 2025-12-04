@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDS测评中 - 心理健康评测系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        secondary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        accent: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            200: '#f5d0fe',
+                            300: '#f0abfc',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            800: '#86198f',
+                            900: '#701a75',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'pulse-ring': 'pulseRing 2s ease-in-out infinite',
+                        'bounce-soft': 'bounceSoft 2s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        pulseRing: {
+                            '0%': { transform: 'scale(1)', opacity: '1' },
+                            '50%': { transform: 'scale(1.1)', opacity: '0.7' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        bounceSoft: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .option-btn {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .option-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .option-selected {
+            border-color: #0ea5e9;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.3);
+        }
+        
+        .video-container {
+            aspect-ratio: 16/9;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 答题视频容器专用样式 */
+        .question-video-container {
+            width: 280px;
+            aspect-ratio: 10/9;
+            flex: 0 0 auto;
+        }
+        
+        .progress-circle {
+            transform: rotate(-90deg);
+        }
+        
+        .voice-recording {
+            animation: pulseRing 1.5s ease-in-out infinite;
+        }
+        
+        .status-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        }
+        
+        .status-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        
+        .status-info {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        }
+
+        /* 调整音频上传模块的整体高度 */
+        #audio-upload-section {
+            min-height: 142px; /* 增加最小高度，可根据需要调整数值 */
+            padding: 1rem 0; /* 增加上下内边距 */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50">
+        <div class="w-full px-4">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center space-x-3">
+                    <a href="/main" class="group flex items-center space-x-3 bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center group-hover:rotate-[-5deg] transition-transform duration-300">
+                            <i class="fas fa-arrow-left text-xs"></i>
+                        </div>
+                        <span class="font-medium">返回首页</span>
+                    </a>
+                </div>
+                    
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-brain text-white text-sm"></i>
+                    </div>
+                    <span class="font-semibold text-gray-900">SDS 抑郁自评量表</span>
+                </div>
+                <div class="w-24"></div> <!-- Spacer for centering -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主容器 - 全屏布局 -->
+    <div class="flex-1 w-full h-screen flex flex-col">
+        <!-- 上部分 - 占75%高度 -->
+        <div class="h-3/4 flex">
+            <!-- 左边 - 表情识别模块 -->
+            <div class="w-[40%] p-4">
+                <div class="glass-card rounded-2xl h-full p-6 shadow-lg flex flex-col">
+                    <!-- 表情识别标题 -->
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-smile text-white text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">智能表情识别</h3>
+                                <p class="text-sm text-gray-600">基于昇腾NPU的实时表情分析</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            <span class="text-sm text-green-600 font-medium">NPU</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 表情识别模块（完整UI） -->
+                    <div class="flex-1 flex flex-col">
+                        <!-- 状态栏 -->
+                        <div class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-t-lg px-4 py-2 flex justify-between items-center">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2 h-2 rounded-full animate-pulse" id="emotion-status-dot" style="background-color: #10b981;"></span>
+                                <span class="text-white text-sm font-medium" id="emotion-status-text">检测中...</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button id="emotion-toggle-btn" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs transition-all">
+                                    <i class="fas fa-pause mr-1"></i>
+                                    <span id="emotion-toggle-text">暂停</span>
+                                </button>
+                                <button id="emotion-reset-btn" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs transition-all">
+                                    <i class="fas fa-redo mr-1"></i>
+                                    重置
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 视频区域（上半部分，60%） -->
+                        <div class="bg-black overflow-hidden relative" style="height: 60%;">
+                            <img src="/emotion/video_stream" 
+                                 id="emotion-video-stream"
+                                 alt="表情识别视频流" 
+                                 class="w-full h-full object-contain"
+                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'240\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' fill=\'white\'%3E摄像头加载中...%3C/text%3E%3C/svg%3E';">
+                            
+                            <!-- 当前表情显示（叠加在视频上） -->
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                                <div class="flex items-center justify-center space-x-2 text-white text-sm">
+                                    <span class="opacity-80">当前表情:</span>
+                                    <span class="font-bold text-base" id="current-emotion-value">-</span>
+                                    <span class="text-xs opacity-60" id="confidence-value">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 统计区域（下半部分，40%） -->
+                        <div class="bg-white/50 p-4 rounded-b-lg overflow-y-auto" style="height: 40%;">
+                            <h6 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-chart-bar text-purple-500 mr-2"></i>
+                                表情统计
+                                <small class="text-gray-500 ml-2 font-normal">(<span id="detection-count">0</span> 次)</small>
+                            </h6>
+                            <div id="emotion-stats-grid" class="space-y-2">
+                                <!-- 动态生成统计条 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间 - 答题模块 -->
+            <div class="w-[45%] p-4">
+                <div class="glass-card rounded-2xl h-full p-6 shadow-lg flex flex-col">
+                    <!-- 题目头部信息 -->
+                    <div class="mb-4">
+                        <h2 class="text-xl font-bold text-gray-900" id="current-question">第 1 题 / 共 20 题</h2>
+                        <p class="text-gray-600">请根据最近一周的感觉选择最符合的选项</p>
+                    </div>
+
+                    <!-- 视频播放区域 -->
+                    <div class="mb-4 flex">
+                        <div class="video-container question-video-container bg-gray-100 rounded-lg overflow-hidden">
+                            <video class="w-full h-full object-cover" controls id="question-video" autoplay playsinline>
+                                <source src="/static/video/1.mp4" type="video/mp4" id="video-source">
+                                您的浏览器不支持视频播放。
+                            </video>
+                        </div>
+                        <!-- 语音识别结果在视频右边 -->
+                        <div class="ml-4 w-32">
+                            <div class="space-y-2">
+                                <div class="bg-gray-50 rounded-lg p-2 text-center">
+                                    <p id="status" class="text-gray-600 text-xs">点击语音开始录音</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-2 text-center">
+                                    <p id="result" class="text-gray-900 font-medium text-xs">识别结果</p>
+                                </div>
+                                <div id="response" class="bg-green-50 rounded-lg p-2 text-center">
+                                    <p id="response2" class="text-green-700 hidden text-xs">处理中...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 题目内容 -->
+                    <div class="mb-4">
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border-l-4 border-blue-500">
+                            <h3 class="text-base font-semibold text-gray-900 mb-2">题目内容</h3>
+                            <p class="text-lg text-gray-800 leading-relaxed" id="question-text">您是否感到情绪沮丧，郁闷？</p>
+                        </div>
+                    </div>
+
+                    <!-- 选项内容 -->
+                    <div class="flex-1 space-y-2">
+                        <button class="option-btn glass-card p-3 rounded-lg text-left flex items-center space-x-3 w-full">
+                            <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">A</div>
+                            <div>
+                                <div class="font-medium text-gray-900 text-sm">没有或极少时间</div>
+                                <div class="text-xs text-gray-500">从不或很少有这种感觉</div>
+                            </div>
+                        </button>
+                        <button class="option-btn glass-card p-3 rounded-lg text-left flex items-center space-x-3 w-full">
+                            <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold text-sm">B</div>
+                            <div>
+                                <div class="font-medium text-gray-900 text-sm">少部分时间</div>
+                                <div class="text-xs text-gray-500">偶尔有这种感觉</div>
+                            </div>
+                        </button>
+                        <button class="option-btn glass-card p-3 rounded-lg text-left flex items-center space-x-3 w-full">
+                            <div class="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold text-sm">C</div>
+                            <div>
+                                <div class="font-medium text-gray-900 text-sm">相当多时间</div>
+                                <div class="text-xs text-gray-500">经常有这种感觉</div>
+                            </div>
+                        </button>
+                        <button class="option-btn glass-card p-3 rounded-lg text-left flex items-center space-x-3 w-full">
+                            <div class="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold text-sm">D</div>
+                            <div>
+                                <div class="font-medium text-gray-900 text-sm">绝大部分或全部时间</div>
+                                <div class="text-xs text-gray-500">总是有这种感觉</div>
+                            </div>
+                        </button>
+                        
+                        <!-- 反馈区域 -->
+                        <div id="feedback" class="bg-green-50 border border-green-200 rounded-lg p-3 hidden">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-check-circle text-green-600 text-lg"></i>
+                                <p class="font-medium text-green-800 text-sm">已选择选项</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="flex items-center justify-between pt-4 border-t">
+                        <button id="prev-button" class="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-all duration-200">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>上一题</span>
+                        </button>
+                        <div class="flex items-center space-x-3">
+                            <button id="voice-button" class="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg transition-all duration-200">
+                                <i class="fas fa-microphone"></i>
+                                <span>语音</span>
+                            </button>
+                            <button id="submit-button" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg transition-all duration-200">
+                                提交
+                            </button>
+                            <button id="next-button" class="flex items-center space-x-2 bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2 rounded-lg transition-all duration-200">
+                                <span>下一题</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右边 - 三个模块 -->
+            <div class="w-[30%] p-4 flex flex-col space-y-4">
+                <!-- 测评进度 -->
+                <div class="glass-card rounded-xl p-4 shadow-lg flex-1">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-chart-line text-primary-500 mr-2"></i>
+                        测评进度
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 text-sm">已答题数</span>
+                            <span class="text-lg font-bold text-primary-600" id="answered-count">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 text-sm">累计用时</span>
+                            <span class="text-sm font-medium text-gray-900" id="total-time">00:00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 text-sm">剩余时间</span>
+                            <span class="text-sm font-medium text-orange-600" id="remaining-time">60:00</span>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>进度</span>
+                                <span id="progress-text">0/20</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-500" id="progress-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 答题卡 -->
+                <div class="glass-card rounded-xl p-4 shadow-lg flex-1">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-th-large text-primary-500 mr-2"></i>
+                        答题卡
+                    </h3>
+                    <div class="grid grid-cols-5 gap-1 mb-3" id="answer-sheet">
+                        <!-- 答题卡将由JS动态生成 -->
+                    </div>
+                    <div class="flex flex-wrap gap-1 text-xs">
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-primary-500 rounded-full"></div>
+                            <span class="text-gray-600">当前</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-secondary-500 rounded-full"></div>
+                            <span class="text-gray-600">已答</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+                            <span class="text-gray-600">未答</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 音频上传功能 -->
+                <div class="glass-card rounded-xl p-4 shadow-lg flex-1">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-upload text-primary-500 mr-2"></i>
+                        音频上传
+                    </h3>
+                    <div id="audio-upload-section" class="space-y-2">
+                        <div class="flex flex-col items-center space-y-2">
+                            <input type="file" id="audio-file-input" accept="audio/*" class="hidden">
+                            <button id="select-audio-button" class="flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 text-blue-700 px-3 py-2 rounded-lg transition-all duration-200 w-full justify-center text-sm">
+                                <i class="fas fa-folder-open"></i>
+                                <span>选择音频</span>
+                            </button>
+                            <div id="audio-file-name" class="text-xs text-blue-600 text-center"></div>
+                            <button id="upload-audio-submit" class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-all duration-200 w-full justify-center text-sm" disabled>
+                                <i class="fas fa-upload"></i>
+                                <span>上传识别</span>
+                            </button>
+                            <div class="text-xs text-gray-400 text-center">
+                                表情数据: <span id="current-dominant-emotion">-</span>
+                            </div>
+                            <div class="text-xs text-gray-400 text-center">
+                                检测: <span id="total-detections">0</span>次
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下部分 - 占25%高度，四个模块 -->
+        <div class="h-1/4 flex">
+            <!-- 答题统计 -->
+            <div class="w-1/4 p-2">
+                <div class="glass-card rounded-xl p-4 shadow-lg h-full">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-chart-pie text-primary-500 mr-2"></i>
+                        答题统计
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-blue-700">完成度</span>
+                                <span class="text-sm font-bold text-blue-800" id="completion-rate">0%</span>
+                            </div>
+                            <div class="w-full bg-blue-200 rounded-full h-1 mt-1">
+                                <div class="bg-blue-600 h-1 rounded-full transition-all duration-500" id="completion-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-green-700">平均用时</span>
+                                <span class="text-sm font-bold text-green-800" id="avg-time">0秒</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-purple-700">语音使用</span>
+                                <span class="text-sm font-bold text-purple-800" id="voice-usage">0次</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 健康小贴士 -->
+            <div class="w-1/4 p-2">
+                <div class="glass-card rounded-xl p-4 shadow-lg h-full">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-lightbulb text-primary-500 mr-2"></i>
+                        健康小贴士
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg p-2">
+                            <div class="flex items-start space-x-2">
+                                <i class="fas fa-sun text-yellow-600 mt-0.5 text-sm"></i>
+                                <p class="text-xs text-yellow-800 leading-relaxed">保持规律作息</p>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-2">
+                            <div class="flex items-start space-x-2">
+                                <i class="fas fa-running text-green-600 mt-0.5 text-sm"></i>
+                                <p class="text-xs text-green-800 leading-relaxed">适量运动锻炼</p>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-2">
+                            <div class="flex items-start space-x-2">
+                                <i class="fas fa-users text-blue-600 mt-0.5 text-sm"></i>
+                                <p class="text-xs text-blue-800 leading-relaxed">多与亲友交流</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快捷操作 -->
+            <div class="w-1/4 p-2">
+                <div class="glass-card rounded-xl p-4 shadow-lg h-full">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-bolt text-primary-500 mr-2"></i>
+                        快捷操作
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="jump-to-question" class="w-full bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-800 px-3 py-2 rounded-lg transition-all duration-200 flex items-center justify-start space-x-2">
+                            <i class="fas fa-search text-sm"></i>
+                            <span class="text-xs font-medium">跳转题目</span>
+                        </button>
+                        <button id="auto-play-all" class="w-full bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 text-green-800 px-3 py-2 rounded-lg transition-all duration-200 flex items-center justify-start space-x-2">
+                            <i class="fas fa-play text-sm"></i>
+                            <span class="text-xs font-medium">播放视频</span>
+                        </button>
+                        <button id="reset-progress" class="w-full bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 text-orange-800 px-3 py-2 rounded-lg transition-all duration-200 flex items-center justify-start space-x-2">
+                            <i class="fas fa-redo text-sm"></i>
+                            <span class="text-xs font-medium">重新开始</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作说明 -->
+            <div class="w-1/4 p-2">
+                <div class="glass-card rounded-xl p-4 shadow-lg h-full">
+                    <h3 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-info-circle text-primary-500 mr-2"></i>
+                        操作说明
+                    </h3>
+                    <div class="space-y-2 text-xs text-gray-700">
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-video text-blue-500 mt-0.5 text-xs"></i>
+                            <span class="leading-relaxed">观看视频了解题目</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-microphone text-green-500 mt-0.5 text-xs"></i>
+                            <span class="leading-relaxed">语音答题更便捷</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-mouse-pointer text-purple-500 mt-0.5 text-xs"></i>
+                            <span class="leading-relaxed">直接点击选项答题</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-clock text-orange-500 mt-0.5 text-xs"></i>
+                            <span class="leading-relaxed">建议每题30秒思考</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // 选项映射
+        const optionValues = {
+            'A': 1,
+            'B': 2,
+            'C': 3,
+            'D': 4
+        };
+
+        // 测评相关变量
+        let currentQuestion = 1;
+        const totalQuestions = 20;
+        let answers = {};
+        let startTime = null;
+        let timerInterval = null;
+        let totalTime = 0;
+
+        // 20道题目文本
+        const questionTexts = [
+            "您是否感到情绪沮丧，郁闷？",
+            "您是否感到早晨心情最好？",
+            "您是否要哭或想哭？",
+            "您是否夜间睡眠不好？",
+            "您是否吃饭像平常一样多？",
+            "您的性功能是否正常？",
+            "您是否感到体重减轻？",
+            "您是否为便秘烦恼？",
+            "您的心跳是否比平时快？",
+            "您是否无故感到疲乏？",
+            "您的头脑是否像平常一样清楚？",
+            "您做事情是否像平常一样不感到困难？",
+            "您是否坐卧难安，难以保持平静？",
+            "您是否对未来感到有希望？",
+            "您是否比平时更容易激怒？",
+            "您是否觉得决定什么事很容易？",
+            "您是否感到自己是有用的和不可缺少的人？",
+            "您的生活是否很有意思？",
+            "您是否觉得假若您死了，别人会过得更好？",
+            "您是否仍旧喜欢自己平时喜欢的东西？"
+        ];
+
+        // 语音识别相关
+        let recognition;
+        let isRecording = false;
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始初始化...');
+            
+            // 初始化计时器
+            startTimer();
+            
+            // 初始化选项按钮
+            initOptionButtons();
+            
+            // 初始化答题卡
+            initAnswerSheet();
+            
+            // 初始化按钮事件
+            initButtonEvents();
+            
+            // 初始化语音识别
+            initVoiceRecognition();
+            
+            // 初始化音频上传
+            initAudioUpload();
+            
+            // 初始化快捷操作
+            initQuickActions();
+            
+            // 更新显示
+            updateQuestionCounter();
+            updateAssessmentStats();
+            
+            // 自动播放第一题视频
+            setTimeout(() => {
+                const video = document.getElementById('question-video');
+                if (video) {
+                    video.play().catch(error => {
+                        console.log('视频自动播放失败，可能需要用户交互:', error);
+                    });
+                }
+            }, 500);
+            
+            // 页面加载动画
+            document.body.classList.add('animate-fade-in');
+        });
+
+        // 初始化语音识别
+        function initVoiceRecognition() {
+            const voiceButton = document.getElementById('voice-button');
+            const status = document.getElementById('status');
+            const result = document.getElementById('result');
+            const response2 = document.getElementById('response2');
+
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'zh-CN';
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                    voiceButton.classList.add('voice-recording');
+                    voiceButton.innerHTML = '<i class="fas fa-stop"></i><span>停止录音</span>';
+                    status.textContent = '正在聆听您的声音...';
+                    status.className = 'text-green-600 font-medium';
+                    result.textContent = '';
+                    response2.classList.add('hidden');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcriptions = [];
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        transcriptions.push(event.results[i][0].transcript);
+                    }
+                    result.textContent = transcriptions.join('');
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('语音识别错误:', event.error);
+                    status.textContent = '识别出现错误，请重试';
+                    status.className = 'text-red-600 font-medium';
+                    resetVoiceButton();
+                };
+
+                recognition.onend = function() {
+                    if (isRecording) {
+                        recognition.start();
+                    } else {
+                        resetVoiceButton();
+                    }
+                };
+            } else {
+                status.textContent = '您的浏览器不支持语音识别';
+                status.className = 'text-red-600 font-medium';
+                voiceButton.disabled = true;
+                voiceButton.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            voiceButton.addEventListener('click', function() {
+                if (isRecording) {
+                    stopRecording();
+                    const text = result.textContent;
+                    if (text.trim()) {
+                        sendToServer(text);
+                    }
+                } else {
+                    startRecording();
+                }
+            });
+        }
+
+        // 重置语音按钮
+        function resetVoiceButton() {
+            const voiceButton = document.getElementById('voice-button');
+            const status = document.getElementById('status');
+            
+            isRecording = false;
+            voiceButton.classList.remove('voice-recording');
+            voiceButton.innerHTML = '<i class="fas fa-microphone"></i><span>语音答题</span>';
+            status.textContent = '点击语音按钮开始录音';
+            status.className = 'text-gray-600';
+        }
+
+        // 开始录音
+        function startRecording() {
+            if (!recognition) {
+                initVoiceRecognition();
+            }
+            recognition.start();
+        }
+
+        // 停止录音
+        function stopRecording() {
+            isRecording = false;
+            recognition.stop();
+        }
+
+        // 发送语音内容到服务器
+        function sendToServer(text) {
+            const status = document.getElementById('status');
+            const response2 = document.getElementById('response2');
+            
+            if (!text.trim()) {
+                status.textContent = '没有识别到语音内容';
+                status.className = 'text-yellow-600 font-medium';
+                return;
+            }
+
+            status.textContent = '正在处理语音内容...';
+            status.className = 'text-blue-600 font-medium';
+
+            fetch('/test/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('语音识别结果:', data);
+                
+                if (data.answer) {
+                    // 自动选择对应的选项（标记为语音输入）
+                    selectOption(data.answer, data.text, true);
+                    
+                    // 显示成功信息
+                    status.textContent = '识别成功，已自动选择';
+                    status.className = 'text-green-600 font-medium';
+                    response2.classList.remove('hidden');
+                    response2.textContent = `识别到: ${data.text} → 选项${data.answer}`;
+                    
+                    // 语音识别自动进入下一题或提交
+                    setTimeout(() => {
+                        voiceAutoProgressToNext();
+                    }, 2000);
+                    
+                } else {
+                    status.textContent = '无法识别有效选项，请重试';
+                    status.className = 'text-yellow-600 font-medium';
+                    response2.classList.remove('hidden');
+                    response2.textContent = data.message || '无法确定选项';
+                }
+            })
+            .catch(error => {
+                status.textContent = '处理失败，请重试';
+                status.className = 'text-red-600 font-medium';
+                console.error('Error:', error);
+            });
+        }
+
+        // 选择选项
+        function selectOption(optionKey, sourceText = '', isVoiceInput = false) {
+            const optionButtons = document.querySelectorAll('.option-btn');
+            
+            // 移除所有选中状态
+            optionButtons.forEach(btn => btn.classList.remove('option-selected'));
+            
+            // 找到对应选项并选中
+            optionButtons.forEach(btn => {
+                const btnKey = btn.querySelector('div').textContent;
+                if (btnKey === optionKey) {
+                    btn.classList.add('option-selected');
+                    
+                    // 记录答案
+                    const optionValue = optionValues[optionKey];
+                    answers[currentQuestion] = {
+                        option: optionKey,
+                        value: optionValue,
+                        source: isVoiceInput ? 'voice' : 'manual'
+                    };
+                    
+                    // 更新显示
+                    updateFeedback(optionKey, optionValue);
+                    updateAnswerSheet();
+                    updateAssessmentStats();
+                }
+            });
+        }
+
+        // 语音识别专用的自动进入下一题或提交
+        function voiceAutoProgressToNext() {
+            const status = document.getElementById('status');
+            
+            if (currentQuestion < totalQuestions) {
+                // 自动跳到下一题
+                loadQuestion(currentQuestion + 1);
+                status.textContent = '已自动进入下一题';
+                status.className = 'text-blue-600 font-medium';
+                setTimeout(() => {
+                    status.textContent = '点击语音按钮开始录音';
+                    status.className = 'text-gray-600';
+                }, 2000);
+            } else {
+                // 所有题目答完，检查是否自动提交
+                if (Object.keys(answers).length === totalQuestions) {
+                    status.textContent = '所有题目已完成，3秒后自动提交';
+                    status.className = 'text-orange-600 font-medium';
+                    setTimeout(() => {
+                        submitAssessment(true);
+                    }, 3000);
+                }
+            }
+        }
+
+        // 手动点击的自动进入下一题（较短延迟）
+        function manualAutoProgressToNext() {
+            const status = document.getElementById('status');
+            
+            if (currentQuestion < totalQuestions) {
+                setTimeout(() => {
+                    loadQuestion(currentQuestion + 1);
+                    status.textContent = '已自动进入下一题';
+                    status.className = 'text-blue-600 font-medium';
+                    setTimeout(() => {
+                        status.textContent = '点击语音按钮开始录音';
+                        status.className = 'text-gray-600';
+                    }, 1500);
+                }, 1000);
+            } else {
+                // 所有题目答完，检查是否自动提交
+                if (Object.keys(answers).length === totalQuestions) {
+                    setTimeout(() => {
+                        status.textContent = '所有题目已完成，3秒后自动提交';
+                        status.className = 'text-orange-600 font-medium';
+                        setTimeout(() => {
+                            submitAssessment(true);
+                        }, 3000);
+                    }, 1000);
+                }
+            }
+        }
+
+        // 初始化选项按钮
+        function initOptionButtons() {
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const optionKey = this.querySelector('div').textContent;
+                    selectOption(optionKey, '', false); // 标记为手动输入
+                    
+                    // 手动点击的自动进入下一题
+                    manualAutoProgressToNext();
+                });
+            });
+        }
+
+        // 初始化答题卡
+        function initAnswerSheet() {
+            const answerSheetContainer = document.getElementById('answer-sheet');
+            answerSheetContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalQuestions; i++) {
+                const button = document.createElement('button');
+                button.className = `w-8 h-8 text-sm rounded-lg flex items-center justify-center transition-all duration-200 ${
+                    i === currentQuestion ? 'bg-primary-500 text-white' :
+                    answers[i] ? 'bg-secondary-500 text-white' : 'bg-gray-300 text-gray-600'
+                }`;
+                button.textContent = i;
+                button.addEventListener('click', () => {
+                    if (i !== currentQuestion) {
+                        loadQuestion(i);
+                    }
+                });
+                answerSheetContainer.appendChild(button);
+            }
+        }
+
+        // 更新答题卡
+        function updateAnswerSheet() {
+            const answerButtons = document.querySelectorAll('#answer-sheet button');
+
+            answerButtons.forEach((btn, index) => {
+                const questionNum = index + 1;
+
+                if (questionNum === currentQuestion) {
+                    btn.className = 'w-8 h-8 text-sm bg-primary-500 text-white rounded-lg flex items-center justify-center transition-all duration-200';
+                } else if (answers[questionNum]) {
+                    btn.className = 'w-8 h-8 text-sm bg-secondary-500 text-white rounded-lg flex items-center justify-center transition-all duration-200';
+                } else {
+                    btn.className = 'w-8 h-8 text-sm bg-gray-300 text-gray-600 rounded-lg flex items-center justify-center transition-all duration-200';
+                }
+            });
+        }
+
+        // 更新反馈信息
+        function updateFeedback(optionKey, optionValue) {
+            const feedbackElement = document.getElementById('feedback');
+            feedbackElement.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    <div>
+                        <p class="font-medium text-green-800">已选择选项 ${optionKey}</p>
+                    </div>
+                </div>
+            `;
+            feedbackElement.classList.remove('hidden');
+        }
+
+        // 更新问题计数器和视频
+        function updateQuestionCounter() {
+            document.getElementById('current-question').textContent = `第 ${currentQuestion} 题 / 共 ${totalQuestions} 题`;
+            document.getElementById('video-source').src = `/static/video/${currentQuestion}.mp4`;
+            document.getElementById('question-video').load();
+            
+            // 更新题目文本
+            document.getElementById('question-text').textContent = questionTexts[currentQuestion - 1];
+        }
+
+        // 加载问题
+        function loadQuestion(questionNum) {
+            currentQuestion = questionNum;
+            updateQuestionCounter();
+            updateAnswerSheet();
+
+            // 清除选中状态
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('option-selected');
+            });
+
+            // 如果该题已有答案，选中对应的选项
+            if (answers[questionNum]) {
+                const selectedOption = answers[questionNum].option;
+                selectOption(selectedOption);
+            } else {
+                // 隐藏反馈
+                document.getElementById('feedback').classList.add('hidden');
+            }
+
+            // 自动播放视频
+            setTimeout(() => {
+                const video = document.getElementById('question-video');
+                if (video) {
+                    video.play().catch(error => {
+                        console.log('视频自动播放失败，可能需要用户交互:', error);
+                    });
+                }
+            }, 500);
+
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 初始化按钮事件
+        function initButtonEvents() {
+            // 上一题按钮
+            document.getElementById('prev-button').addEventListener('click', function() {
+                if (currentQuestion > 1) {
+                    loadQuestion(currentQuestion - 1);
+                }
+            });
+
+            // 下一题按钮
+            document.getElementById('next-button').addEventListener('click', function() {
+                if (currentQuestion < totalQuestions) {
+                    loadQuestion(currentQuestion + 1);
+                } else {
+                    alert('已经是最后一题了');
+                }
+            });
+
+            // 提交答案按钮
+            document.getElementById('submit-button').addEventListener('click', function() {
+                if (Object.keys(answers).length === totalQuestions) {
+                    submitAssessment(false);
+                } else if (!answers[currentQuestion]) {
+                    alert('请先选择一个选项');
+                } else if (currentQuestion < totalQuestions) {
+                    loadQuestion(currentQuestion + 1);
+                } else {
+                    submitAssessment(false);
+                }
+            });
+        }
+
+        // 开始计时器
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                totalTime = Math.floor((Date.now() - startTime) / 1000);
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        // 更新计时器显示
+        function updateTimerDisplay() {
+            // 累计用时
+            const totalMinutes = Math.floor(totalTime / 60);
+            const totalSeconds = totalTime % 60;
+            document.getElementById('total-time').textContent =
+                `${totalMinutes.toString().padStart(2, '0')}:${totalSeconds.toString().padStart(2, '0')}`;
+
+            // 剩余时间
+            const remainingTime = 60 * 60 - totalTime;
+            const remainingMinutes = Math.floor(remainingTime / 60);
+            const remainingSeconds = remainingTime % 60;
+            document.getElementById('remaining-time').textContent =
+                `${remainingMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+
+            // 时间用完时自动提交
+            if (remainingTime <= 0) {
+                clearInterval(timerInterval);
+                submitAssessment(true);
+            }
+        }
+
+        // 更新测评统计
+        function updateAssessmentStats() {
+            const answeredCount = Object.keys(answers).length;
+            document.getElementById('answered-count').textContent = answeredCount;
+
+            // 更新进度条
+            const progressPercentage = (answeredCount / totalQuestions) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
+            document.getElementById('progress-text').textContent = `${answeredCount}/${totalQuestions}`;
+
+            // 更新下方统计模块
+            updateBottomStats(answeredCount, progressPercentage);
+        }
+
+        // 更新下方统计模块
+        function updateBottomStats(answeredCount, progressPercentage) {
+            // 更新完成度
+            document.getElementById('completion-rate').textContent = `${Math.round(progressPercentage)}%`;
+            document.getElementById('completion-bar').style.width = `${progressPercentage}%`;
+
+            // 更新平均用时
+            if (answeredCount > 0) {
+                const avgTime = Math.round(totalTime / answeredCount);
+                document.getElementById('avg-time').textContent = `${avgTime}秒`;
+            }
+
+            // 更新语音使用次数
+            const voiceUsageCount = Object.values(answers).filter(answer => answer.source === 'voice').length;
+            document.getElementById('voice-usage').textContent = `${voiceUsageCount}次`;
+        }
+
+        // 提交测评（使用综合评分）
+        function submitAssessment(isAutoSubmit = false) {
+            // 如果是自动提交且所有题目都已完成，直接提交
+            if (isAutoSubmit && Object.keys(answers).length === totalQuestions) {
+                // 继续执行提交逻辑
+            } else if (Object.keys(answers).length < totalQuestions) {
+                if (!confirm(`您还有 ${totalQuestions - Object.keys(answers).length} 道题未完成，确定要提交吗？`)) {
+                    return;
+                }
+            }
+
+            // 调用综合评分提交函数
+            submitAnswersWithEmotion();
+        }
+
+        // 音频上传功能
+        function initAudioUpload() {
+            const selectAudioButton = document.getElementById('select-audio-button');
+            const audioFileInput = document.getElementById('audio-file-input');
+            const audioFileName = document.getElementById('audio-file-name');
+            const uploadAudioSubmit = document.getElementById('upload-audio-submit');
+
+            let selectedAudioFile = null;
+
+            // 选择音频文件
+            selectAudioButton.addEventListener('click', function() {
+                audioFileInput.click();
+            });
+
+            // 文件选择变化
+            audioFileInput.addEventListener('change', function(e) {
+                selectedAudioFile = e.target.files[0];
+                if (selectedAudioFile) {
+                    audioFileName.textContent = `已选择: ${selectedAudioFile.name}`;
+                    uploadAudioSubmit.disabled = false;
+                } else {
+                    audioFileName.textContent = '';
+                    uploadAudioSubmit.disabled = true;
+                }
+            });
+
+            // 上传并识别音频
+            uploadAudioSubmit.addEventListener('click', function() {
+                if (!selectedAudioFile) return;
+
+                const formData = new FormData();
+                formData.append('audio', selectedAudioFile);
+
+                // 显示加载状态
+                uploadAudioSubmit.disabled = true;
+                uploadAudioSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>识别中...</span>';
+
+                fetch('/test/process', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('识别结果:', data);
+
+                    if (data.answer) {
+                        selectOption(data.answer, data.text, true); // 标记为语音输入
+                        document.getElementById('response2').textContent = `识别成功: ${data.text}`;
+                        document.getElementById('response2').classList.remove('hidden');
+                        
+                        // 音频上传的自动进入下一题
+                        setTimeout(() => {
+                            voiceAutoProgressToNext();
+                        }, 2000);
+                    } else {
+                        alert(data.message || '识别失败，请重试');
+                    }
+                })
+                .catch(error => {
+                    console.error('上传错误:', error);
+                    alert('上传失败，请检查网络连接');
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    uploadAudioSubmit.disabled = false;
+                    uploadAudioSubmit.innerHTML = '<i class="fas fa-upload"></i><span>上传并识别</span>';
+                });
+            });
+        }
+
+        // 初始化快捷操作
+        function initQuickActions() {
+            // 跳转到指定题目
+            document.getElementById('jump-to-question').addEventListener('click', function() {
+                const questionNum = prompt('请输入要跳转到的题目编号 (1-20):');
+                if (questionNum && !isNaN(questionNum)) {
+                    const num = parseInt(questionNum);
+                    if (num >= 1 && num <= totalQuestions) {
+                        loadQuestion(num);
+                        // 显示提示
+                        showToast(`已跳转到第${num}题`, 'info');
+                    } else {
+                        alert('请输入1-20之间的数字');
+                    }
+                }
+            });
+
+            // 连续播放所有视频
+            document.getElementById('auto-play-all').addEventListener('click', function() {
+                if (confirm('将自动播放所有题目视频，确定继续吗？')) {
+                    autoPlayAllVideos();
+                }
+            });
+
+            // 重新开始测评
+            document.getElementById('reset-progress').addEventListener('click', function() {
+                if (confirm('这将清除所有答题进度，确定要重新开始吗？')) {
+                    resetAssessment();
+                }
+            });
+        }
+
+        // 自动播放所有视频
+        function autoPlayAllVideos() {
+            let currentVideoIndex = 1;
+            
+            function playNextVideo() {
+                if (currentVideoIndex <= totalQuestions) {
+                    loadQuestion(currentVideoIndex);
+                    showToast(`正在播放第${currentVideoIndex}题视频`, 'info');
+                    
+                    const video = document.getElementById('question-video');
+                    video.play();
+                    
+                    video.addEventListener('ended', function videoEndedHandler() {
+                        video.removeEventListener('ended', videoEndedHandler);
+                        currentVideoIndex++;
+                        setTimeout(playNextVideo, 2000); // 2秒间隔
+                    });
+                } else {
+                    showToast('所有视频播放完毕', 'success');
+                }
+            }
+            
+            playNextVideo();
+        }
+
+        // 重置测评
+        function resetAssessment() {
+            answers = {};
+            currentQuestion = 1;
+            totalTime = 0;
+            
+            // 重置显示
+            updateQuestionCounter();
+            updateAnswerSheet();
+            updateAssessmentStats();
+            
+            // 清除选中状态
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('option-selected');
+            });
+            
+            // 隐藏反馈
+            document.getElementById('feedback').classList.add('hidden');
+            
+            // 重置计时器
+            clearInterval(timerInterval);
+            startTimer();
+            
+            showToast('测评已重新开始', 'success');
+        }
+
+        // 显示提示消息
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const colors = {
+                'info': 'bg-blue-500',
+                'success': 'bg-green-500',
+                'warning': 'bg-yellow-500',
+                'error': 'bg-red-500'
+            };
+            
+            toast.className = `fixed top-20 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-up`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 检查语音识别服务状态
+        fetch('/test/speech-status')
+        .then(response => response.json())
+        .then(data => {
+            console.log('语音识别服务状态:', data.message);
+        })
+        .catch(error => {
+            console.warn('无法检查语音识别服务状态:', error);
+        });
+    </script>
+
+    <!-- 表情识别：使用MJPEG视频流（face_emotion.py的实时检测框直接嵌入） -->
+    <script>
+        // 表情识别相关变量（用于数据收集）
+        let emotionData = {
+            detections: [],
+            summary: {}
+        };
+        
+        // 表情识别状态
+        let isEmotionDetectionRunning = true; // 默认开启
+        let emotionStatsInterval = null;
+        
+        // 表情中文映射
+        const emotionChinese = {
+            'angry': '愤怒', 'disgust': '厌恶', 'fear': '害怕',
+            'happy': '高兴', 'neutral': '自然', 'sad': '悲伤', 
+            'surprise': '惊讶', 'surprised': '惊讶'
+        };
+        
+        // 初始化表情识别UI
+        function initEmotionRecognition() {
+            console.log('初始化表情识别UI控件');
+            
+            // 绑定开关按钮
+            const toggleBtn = document.getElementById('emotion-toggle-btn');
+            const toggleText = document.getElementById('emotion-toggle-text');
+            const videoStream = document.getElementById('emotion-video-stream');
+            const statusDot = document.getElementById('emotion-status-dot');
+            const statusText = document.getElementById('emotion-status-text');
+            
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    isEmotionDetectionRunning = !isEmotionDetectionRunning;
+                    
+                    const videoContainer = videoStream.parentElement;
+                    let pauseOverlay = document.getElementById('emotion-pause-overlay');
+                    
+                    if (isEmotionDetectionRunning) {
+                        // 继续检测 - 显示视频流
+                        videoStream.style.display = 'block';
+                        if (pauseOverlay) {
+                            pauseOverlay.style.display = 'none';
+                        }
+                        statusDot.style.backgroundColor = '#10b981'; // 绿色
+                        statusText.textContent = '检测中...';
+                        toggleBtn.innerHTML = '<i class="fas fa-pause mr-1"></i><span id="emotion-toggle-text">暂停</span>';
+                        startEmotionStatsUpdate();
+                        console.log('✅ 表情检测已继续');
+                    } else {
+                        // 暂停检测 - 隐藏视频流，显示暂停提示
+                        videoStream.style.display = 'none';
+                        
+                        // 创建暂停覆盖层（如果不存在）
+                        if (!pauseOverlay) {
+                            pauseOverlay = document.createElement('div');
+                            pauseOverlay.id = 'emotion-pause-overlay';
+                            pauseOverlay.className = 'absolute inset-0 bg-black flex items-center justify-center';
+                            pauseOverlay.innerHTML = '<div class="text-white text-center"><i class="fas fa-pause-circle text-5xl mb-2"></i><p class="text-lg">检测已暂停</p><p class="text-sm opacity-70 mt-1">点击"继续"按钮恢复检测</p></div>';
+                            videoContainer.appendChild(pauseOverlay);
+                        } else {
+                            pauseOverlay.style.display = 'flex';
+                        }
+                        
+                        statusDot.style.backgroundColor = '#6b7280'; // 灰色
+                        statusText.textContent = '已暂停';
+                        toggleBtn.innerHTML = '<i class="fas fa-play mr-1"></i><span id="emotion-toggle-text">继续</span>';
+                        stopEmotionStatsUpdate();
+                        console.log('⏸ 表情检测已暂停');
+                    }
+                });
+            }
+            
+            // 绑定重置按钮
+            const resetBtn = document.getElementById('emotion-reset-btn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    fetch('/emotion/reset', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log('✅ 表情统计已重置');
+                            updateEmotionStats(); // 立即更新显示
+                            alert('表情统计已重置');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('重置失败:', error);
+                        alert('重置失败');
+                    });
+                });
+            }
+            
+            // 自动开始统计更新
+            startEmotionStatsUpdate();
+            console.log('✅ 表情识别UI初始化完成，自动开始检测');
+        }
+        
+        // 启动统计数据更新
+        function startEmotionStatsUpdate() {
+            if (emotionStatsInterval) {
+                clearInterval(emotionStatsInterval);
+            }
+            
+            // 立即更新一次
+            updateEmotionStats();
+            
+            // 每1秒更新一次（更快响应）
+            emotionStatsInterval = setInterval(updateEmotionStats, 1000);
+        }
+        
+        // 停止统计数据更新
+        function stopEmotionStatsUpdate() {
+            if (emotionStatsInterval) {
+                clearInterval(emotionStatsInterval);
+                emotionStatsInterval = null;
+            }
+        }
+        
+        // 更新表情统计显示
+        function updateEmotionStats() {
+            if (!isEmotionDetectionRunning) return;
+            
+            fetch('/emotion/statistics')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const stats = data.data;
+                        const totalDetections = stats.total_detections || 0;
+                        const mostCommon = stats.most_common || 'neutral';
+                        const emotions = stats.emotions || {};
+                        
+                        // 更新检测次数
+                        const detectionCountEl = document.getElementById('detection-count');
+                        if (detectionCountEl) {
+                            detectionCountEl.textContent = totalDetections;
+                        }
+                        
+                        // 更新当前主要表情
+                        const currentEmotionEl = document.getElementById('current-emotion-value');
+                        if (currentEmotionEl) {
+                            currentEmotionEl.textContent = emotionChinese[mostCommon] || mostCommon;
+                        }
+                        
+                        // 更新统计图表
+                        updateStatsGrid(emotions, totalDetections);
+                        
+                        // 保存到emotionData用于提交
+                        emotionData.summary = stats;
+                    }
+                })
+                .catch(error => {
+                    console.error('获取表情统计失败:', error);
+                });
+        }
+        
+        // 更新统计条图表
+        function updateStatsGrid(emotions, total) {
+            const statsGrid = document.getElementById('emotion-stats-grid');
+            if (!statsGrid) return;
+            
+            statsGrid.innerHTML = '';
+            
+            // 按顺序显示所有表情
+            const emotionOrder = ['happy', 'neutral', 'sad', 'angry', 'fear', 'surprise', 'disgust'];
+            
+            emotionOrder.forEach(emotion => {
+                const emotionData = emotions[emotion] || { count: 0, percentage: 0 };
+                const count = emotionData.count || 0;
+                const percentage = emotionData.percentage || 0;
+                
+                const statItem = document.createElement('div');
+                statItem.className = 'flex items-center gap-2';
+                statItem.innerHTML = `
+                    <div class="w-10 text-sm font-medium text-gray-700 flex-shrink-0">${emotionChinese[emotion] || emotion}</div>
+                    <div class="flex-1 bg-gray-200 rounded-full h-2.5 overflow-hidden min-w-0">
+                        <div class="bg-gradient-to-r from-purple-500 to-indigo-600 h-full transition-all duration-300" 
+                             style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="text-sm text-gray-600 flex-shrink-0 text-right" style="min-width: 90px;">${count} 次 (${percentage.toFixed(1)}%)</div>
+                `;
+                statsGrid.appendChild(statItem);
+            });
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                initEmotionRecognition();
+            }, 500);
+        });
+        
+        // 修改原来的提交函数，包含表情数据和综合评分
+        function submitAnswersWithEmotion() {
+            console.log('开始提交测评...');
+            console.log('当前答案:', answers);
+            console.log('答题时间:', totalTime);
+            
+            // 停止计时器
+            clearInterval(timerInterval);
+            
+            // 停止表情统计更新
+            stopEmotionStatsUpdate();
+
+            // 获取表情统计数据（从后端API获取最新数据）
+            fetch('/emotion/statistics')
+                .then(response => response.json())
+                .then(statsData => {
+                    if (statsData.success && statsData.data) {
+                        emotionData.summary = statsData.data;
+                        console.log('✅ 表情数据已收集:', emotionData);
+                    } else {
+                        console.warn('⚠️ 未能获取表情统计数据');
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ 获取表情统计失败:', err);
+                })
+                .finally(() => {
+                    // 无论是否获取成功，都继续提交
+                    submitData();
+                });
+            
+            function submitData() {
+                const submitDataObj = {
+                    answers: answers,
+                    totalTime: totalTime,
+                    emotionData: emotionData
+                };
+                
+                console.log('📤 提交的数据:', submitDataObj);
+            
+            fetch('/SDS/submit_with_emotion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                    body: JSON.stringify(submitDataObj)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 显示综合评分结果
+                    showComprehensiveResults(data);
+                } else {
+                    console.error('提交失败:', data.error);
+                    alert('提交失败：' + data.error);
+                    
+                    // 如果是登录相关错误，跳转到登录页
+                    if (data.error.includes('登录') || data.error.includes('开始测评')) {
+                        window.location.href = '/login';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('提交错误:', error);
+                if (error.message.includes('401')) {
+                    alert('用户未登录，请重新登录');
+                    window.location.href = '/login';
+                } else if (error.message.includes('400')) {
+                    alert('请先开始测评');
+                    window.location.href = '/SDS';
+                } else {
+                    alert('提交过程中发生错误，请重试: ' + error.message);
+                }
+            });
+            }
+        }
+        
+        // 模态框显示结果函数
+        function showResultsModal(data) {
+            const comprehensiveResult = data.comprehensive_result;
+            const emotionSummary = data.emotion_summary;
+            
+            // 创建模态框背景
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modalOverlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+            
+            // 创建模态框内容
+            const modalContent = document.createElement('div');
+            modalContent.className = 'bg-white rounded-2xl p-8 max-w-2xl max-h-96 overflow-y-auto';
+            modalContent.style.cssText = 'background: white; border-radius: 16px; padding: 32px; max-width: 600px; max-height: 500px; overflow-y: auto; position: relative;';
+            
+            modalContent.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-check text-white text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">测评完成！</h2>
+                    <p class="text-gray-600">您的综合评分已生成</p>
+                </div>
+                
+                <div class="text-center mb-6">
+                    <div class="text-4xl font-bold text-blue-600 mb-2">${comprehensiveResult.comprehensive_score.toFixed(1)}</div>
+                    <div class="text-lg text-gray-600 mb-2">综合分数 (满分100分)</div>
+                    <div class="text-2xl font-bold text-gray-900 mb-4">${data.result}</div>
+                    <div class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm">
+                        <i class="fas fa-shield-alt mr-1"></i>
+                        可信度: ${comprehensiveResult.confidence === 'high' ? '高' : comprehensiveResult.confidence === 'medium' ? '中' : '低'}
+                    </div>
+                </div>
+                
+                <div class="text-center space-y-3">
+                    <button onclick="window.location.href='/history'" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl transition-colors">
+                        <i class="fas fa-history mr-2"></i>查看详细报告
+                    </button>
+                    <button onclick="window.location.href='/main'" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl transition-colors">
+                        <i class="fas fa-home mr-2"></i>返回首页
+                    </button>
+                    <button onclick="closeModal()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-xl transition-colors">
+                        关闭
+                    </button>
+                </div>
+            `;
+            
+            modalOverlay.appendChild(modalContent);
+            document.body.appendChild(modalOverlay);
+            
+            // 关闭模态框函数
+            window.closeModal = function() {
+                document.body.removeChild(modalOverlay);
+                // 跳转到历史页面
+                window.location.href = '/history';
+            };
+            
+            // 点击背景关闭
+            modalOverlay.addEventListener('click', function(e) {
+                if (e.target === modalOverlay) {
+                    closeModal();
+                }
+            });
+        }
+        
+        // 新的综合结果显示函数
+        function showComprehensiveResults(data) {
+            // 停止表情识别
+            if (emotionRecognition) {
+                emotionRecognition.destroy();
+            }
+            
+            console.log('显示综合评分结果:', data);
+            
+            // 使用模态框显示结果
+            showResultsModal(data);
+        }
+        
+        // 旧的结果显示函数保留以备兼容
+        function showResults(result, standardScore, emotionSummary = null) {
+            showComprehensiveResults({
+                result: result,
+                sds_score: standardScore,
+                comprehensive_score: standardScore,
+                comprehensive_result: {
+                    comprehensive_score: standardScore,
+                    confidence: 'medium',
+                    analysis: '基于SDS问卷的评估结果',
+                    components: {
+                        emotion_score: 0,
+                        emotion_details: { analysis: '无表情数据' }
+                    },
+                    weights: { sds_score: 1.0, emotion_score: 0.0 }
+                },
+                emotion_summary: emotionSummary
+            });
+        }
+        
+        // 页面加载时，MJPEG视频流会自动开始（通过img标签）
+        // 无需额外初始化，检测框已经在后端实时绘制
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，表情识别视频流已自动启动');
+            
+            // 立即更新一次统计数据
+            updateEmotionStats();
+        });
+    </script>
+</body>
+</html>

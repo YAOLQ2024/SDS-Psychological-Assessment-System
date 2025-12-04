@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDS 神经链接评估终端 V4.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- 引入科技感字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#050b14',       // 极深蓝黑
+                            panel: '#0f172a',    // 面板背景
+                            border: '#1e293b',   // 边框
+                            cyan: '#00f0ff',     // 主色调青
+                            purple: '#d946ef',   // 辅助紫
+                            red: '#ff2a6d',      // 警告红
+                            green: '#05ffa1',    // 成功绿
+                        }
+                    },
+                    backgroundImage: {
+                        'grid-pattern': "linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    boxShadow: {
+                        'glow-cyan': '0 0 10px rgba(0, 240, 255, 0.3), inset 0 0 5px rgba(0, 240, 255, 0.1)',
+                        'glow-purple': '0 0 10px rgba(217, 70, 239, 0.3)',
+                    },
+                    animation: {
+                        'scan': 'scan 4s linear infinite',
+                        'blink': 'blink 1.5s ease-in-out infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        },
+                        blink: {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.3 }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            /* 背景网格 */
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+        }
+
+        /* 科技面板通用样式 */
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            /* 顶部亮条 */
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 四角装饰 */
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        /* 选项按钮特效 */
+        .option-card {
+            background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+            border-left: 2px solid rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+        }
+        .option-card:hover {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.1) 0%, transparent 100%);
+            border-left-color: #00f0ff;
+            padding-left: 1.25rem; /* 悬停右移效果 */
+        }
+        .option-selected {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.2) 0%, transparent 100%);
+            border-left: 4px solid #00f0ff;
+            box-shadow: inset 10px 0 20px -10px rgba(0, 240, 255, 0.3);
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050b14; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+
+        /* 竖屏视频容器 */
+        .video-portrait-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            border-right: 1px solid rgba(0,240,255,0.1);
+        }
+        
+        .hud-overlay {
+            background: 
+                linear-gradient(rgba(0,240,255,0.1) 1px, transparent 1px) 0 0 / 20px 20px,
+                radial-gradient(circle, transparent 60%, #050b14 150%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-cyber-cyan selection:text-black pb-10">
+
+    <!-- 顶部导航 -->
+    <nav class="sticky top-0 z-50 bg-cyber-bg/90 backdrop-blur-md border-b border-cyber-cyan/20">
+        <div class="max-w-[1800px] mx-auto px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-6">
+                <a href="/main" id="back-btn" class="flex items-center gap-2 text-gray-400 hover:text-cyber-cyan transition-colors group">
+                    <i class="fas fa-chevron-left text-xs group-hover:-translate-x-1 transition-transform"></i>
+                    <span class="text-sm font-hud font-bold tracking-widest">EXIT_SYSTEM</span>
+                </a>
+                <div class="h-4 w-px bg-cyber-border"></div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-cyber-cyan rounded-sm shadow-[0_0_8px_#00f0ff] animate-pulse"></div>
+                    <h1 class="text-xl font-tech text-white tracking-wider">SDS <span class="text-cyber-cyan">ASSESSMENT</span> <span class="text-xs text-gray-500 font-mono">v4.0.1</span></h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6 text-xs font-mono">
+                <div class="flex flex-col items-end text-cyber-cyan">
+                    <span class="opacity-50 text-[10px]">SYSTEM TIME</span>
+                    <span id="sys-time">00:00:00</span>
+                </div>
+                <div class="w-8 h-8 rounded border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan">
+                    <i class="fas fa-wifi"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主界面容器 -->
+    <main class="flex-1 w-full max-w-[1800px] mx-auto p-6 flex flex-col gap-6">
+        
+        <!-- SECTION 1: 核心交互区 (高度对齐) -->
+        <!-- 使用 Grid 让左右高度与中间自动对齐 -->
+        <div class="grid grid-cols-12 gap-6 items-stretch min-h-[500px]">
+            
+            <!-- 左侧：视觉传感器 (Col 3) -->
+            <div class="col-span-12 lg:col-span-3 flex flex-col h-full">
+                <div class="cyber-panel flex-1 rounded-xl p-0.5 group flex flex-col h-full">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    
+                    <!-- 标题 -->
+                    <div class="h-10 flex items-center justify-between px-4 bg-black/40 border-b border-white/5">
+                        <span class="text-xs font-hud font-bold text-cyber-cyan"><i class="fas fa-eye mr-2"></i>VISUAL FEED</span>
+                        <div class="flex gap-1">
+                            <div class="w-1.5 h-1.5 bg-red-500 rounded-full animate-blink"></div>
+                            <span class="text-[9px] font-mono text-red-500">REC</span>
+                        </div>
+                    </div>
+
+                    <!-- 视频流区域 (填充剩余高度) -->
+                    <div class="relative flex-1 bg-black overflow-hidden group-hover:shadow-[inset_0_0_20px_rgba(0,240,255,0.2)] transition-all">
+                        <img src="/emotion/video_stream" 
+                             id="emotion-video-stream"
+                             alt="Sensor Stream" 
+                             class="w-full h-full object-cover opacity-80"
+                             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23050b14\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2300f0ff\' font-family=\'monospace\' font-size=\'10\'%3ESENSOR OFFLINE%3C/text%3E%3C/svg%3E';">
+                        
+                        <!-- 装饰：扫描线 -->
+                        <div class="absolute inset-0 bg-scan-line bg-[length:100%_4px] animate-scan pointer-events-none opacity-30"></div>
+                        <!-- 装饰：面部对焦框 -->
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-40 border border-cyber-cyan/30 rounded-lg pointer-events-none">
+                            <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-0.5 bg-cyber-cyan/50"></div>
+                            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-20 h-0.5 bg-cyber-cyan/50"></div>
+                        </div>
+
+                        <!-- 暂停/重置控制浮层 -->
+                        <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <button id="emotion-toggle-btn" class="bg-cyber-panel/90 hover:bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan px-3 py-1 rounded text-xs backdrop-blur font-mono">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button id="emotion-reset-btn" class="bg-cyber-panel/90 hover:bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan px-3 py-1 rounded text-xs backdrop-blur font-mono">
+                                <i class="fas fa-rotate-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 底部实时数据 -->
+                    <div class="h-24 bg-black/40 border-t border-white/5 p-4 flex flex-col justify-center">
+                        <div class="flex justify-between items-end mb-2">
+                            <div class="text-xs text-gray-500 font-mono">PRIMARY</div>
+                            <div class="text-xl font-hud font-bold text-white" id="current-emotion">ANALYZING</div>
+                        </div>
+                        <!-- 简化的条形图 -->
+                        <div class="space-y-1" id="mini-stats-bar">
+                            <!-- JS Inject -->
+                            <div class="h-1 bg-gray-800 rounded overflow-hidden"><div class="h-full w-0 bg-cyber-cyan"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间：核心答题区 (Col 6) - 重新设计为左右结构 -->
+            <div class="col-span-12 lg:col-span-6 h-full">
+                <div class="cyber-panel rounded-xl h-full flex flex-col group border-cyber-cyan/30 shadow-glow-cyan">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+
+                    <!-- 顶部进度条 -->
+                    <div class="h-1.5 w-full bg-gray-800">
+                        <div id="progress-bar" class="h-full bg-gradient-to-r from-cyber-cyan to-blue-600 shadow-[0_0_10px_#00f0ff]" style="width: 5%"></div>
+                    </div>
+
+                    <!-- 主要内容区：左右布局 -->
+                    <div class="flex-1 flex overflow-hidden">
+                        
+                        <!-- 左半部分：竖屏视频 (人物/场景) -->
+                        <div class="w-1/3 video-portrait-container bg-black relative hidden md:block">
+                            <!-- HUD 覆盖 -->
+                            <div class="absolute inset-0 hud-overlay z-10"></div>
+                            <div class="absolute top-4 left-4 z-20 text-[10px] text-cyber-cyan font-mono border border-cyber-cyan/30 px-2 py-0.5 bg-black/50 backdrop-blur rounded">
+                                LIVE FEED_
+                            </div>
+
+                            <video id="question-video" class="w-full h-full object-cover opacity-90" playsinline muted>
+                                <!-- 注意：这里的src指向本地文件，如果本地没有会失败，但不会导致crash -->
+                                <source src="/static/video/1.mp4" type="video/mp4" id="video-source">
+                            </video>
+                            
+                            <!-- 模拟音波 -->
+                            <div class="absolute bottom-10 left-4 right-4 h-8 flex items-end justify-center gap-1 z-20">
+                                <div class="w-1 bg-cyber-cyan/50 animate-pulse h-2"></div>
+                                <div class="w-1 bg-cyber-cyan/50 animate-pulse h-4 delay-75"></div>
+                                <div class="w-1 bg-cyber-cyan/50 animate-pulse h-6 delay-150"></div>
+                                <div class="w-1 bg-cyber-cyan/50 animate-pulse h-3 delay-100"></div>
+                            </div>
+                        </div>
+
+                        <!-- 右半部分：题目与选项 -->
+                        <div class="flex-1 flex flex-col relative bg-gradient-to-br from-cyber-panel to-[#050b14]">
+                            <!-- 题目编号 -->
+                            <div class="p-6 pb-2 flex justify-between items-start">
+                                <div>
+                                    <h2 class="text-4xl font-bold font-hud text-white/10 absolute top-4 right-6 select-none z-0">Q-<span id="current-question-num-bg">01</span></h2>
+                                    <div class="relative z-10">
+                                        <span class="text-xs font-mono text-cyber-cyan mb-1 block">QUESTION SEQUENCE</span>
+                                        <h3 class="text-lg md:text-xl text-white font-medium leading-relaxed" id="question-text">
+                                            正在建立神经连接...
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 选项区域 -->
+                            <div class="flex-1 p-6 space-y-3 z-10 overflow-y-auto">
+                                <button class="option-btn option-card w-full p-3 pl-4 rounded text-left group/btn">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-gray-300 group-hover/btn:text-white text-sm">没有或极少时间</span>
+                                        <span class="font-mono text-xs text-gray-600 group-hover/btn:text-cyber-cyan">A</span>
+                                    </div>
+                                </button>
+                                <button class="option-btn option-card w-full p-3 pl-4 rounded text-left group/btn">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-gray-300 group-hover/btn:text-white text-sm">少部分时间</span>
+                                        <span class="font-mono text-xs text-gray-600 group-hover/btn:text-cyber-cyan">B</span>
+                                    </div>
+                                </button>
+                                <button class="option-btn option-card w-full p-3 pl-4 rounded text-left group/btn">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-gray-300 group-hover/btn:text-white text-sm">相当多时间</span>
+                                        <span class="font-mono text-xs text-gray-600 group-hover/btn:text-cyber-cyan">C</span>
+                                    </div>
+                                </button>
+                                <button class="option-btn option-card w-full p-3 pl-4 rounded text-left group/btn">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-gray-300 group-hover/btn:text-white text-sm">绝大部分或全部时间</span>
+                                        <span class="font-mono text-xs text-gray-600 group-hover/btn:text-cyber-cyan">D</span>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- 底部控制条 (精简版) -->
+                            <div class="h-16 border-t border-white/5 bg-black/20 flex items-center px-6 gap-4 z-10">
+                                <button id="prev-button" class="text-gray-500 hover:text-white transition-colors">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+
+                                <!-- 精致的语音输入条 -->
+                                <div class="flex-1 h-9 bg-black/40 rounded border border-white/10 flex items-center px-1 overflow-hidden group/voice hover:border-cyber-cyan/50 transition-colors">
+                                    <button id="voice-button" class="h-7 px-3 bg-cyber-cyan/10 rounded-sm text-cyber-cyan text-xs font-bold hover:bg-cyber-cyan hover:text-black transition-all flex items-center gap-2">
+                                        <i class="fas fa-microphone"></i> 语音
+                                    </button>
+                                    <div class="flex-1 px-3 flex items-center justify-between">
+                                        <span id="status" class="text-[10px] text-gray-500 font-mono">READY</span>
+                                        <div id="voice-wave" class="hidden flex gap-0.5 items-center h-3">
+                                            <div class="w-0.5 bg-cyber-cyan animate-[pulse_0.5s_ease-in-out_infinite] h-full"></div>
+                                            <div class="w-0.5 bg-cyber-cyan animate-[pulse_0.5s_ease-in-out_infinite_0.1s] h-2/3"></div>
+                                            <div class="w-0.5 bg-cyber-cyan animate-[pulse_0.5s_ease-in-out_infinite_0.2s] h-full"></div>
+                                        </div>
+                                    </div>
+                                    <span id="result" class="text-[10px] text-cyber-cyan/70 font-mono truncate max-w-[100px]"></span>
+                                </div>
+
+                                <button id="next-button" class="h-9 px-6 bg-cyber-cyan/10 hover:bg-cyber-cyan hover:text-black border border-cyber-cyan/50 rounded text-cyber-cyan text-xs font-bold font-hud tracking-wider transition-all flex items-center gap-2 group/next">
+                                    NEXT <i class="fas fa-chevron-right text-[10px] group-hover/next:translate-x-1 transition-transform"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：答题卡与上传 (Col 3) -->
+            <div class="col-span-12 lg:col-span-3 flex flex-col h-full gap-6">
+                <!-- 模块1: 答题矩阵 (上半部分) -->
+                <div class="cyber-panel rounded-xl flex flex-col flex-1 p-4">
+                     <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                     <h3 class="text-xs font-hud font-bold text-gray-400 mb-3 border-b border-white/5 pb-2">
+                        <i class="fas fa-th text-cyber-purple mr-2"></i>ANSWER MATRIX
+                    </h3>
+                    
+                    <div class="flex-1 overflow-y-auto pr-1">
+                        <div class="grid grid-cols-5 gap-2" id="answer-sheet">
+                            <!-- JS生成 -->
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex justify-between text-[9px] font-mono text-gray-500">
+                        <span class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-cyber-cyan rounded-full"></div> CURR</span>
+                        <span class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-cyber-green rounded-full"></div> DONE</span>
+                        <span class="flex items-center gap-1"><div class="w-1.5 h-1.5 bg-white/10 rounded-full"></div> NULL</span>
+                    </div>
+                </div>
+
+                <!-- 模块2: 语音上传 (下半部分) -->
+                <div class="cyber-panel rounded-xl p-4 flex flex-col justify-center min-h-[160px]">
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    <h3 class="text-xs font-hud font-bold text-gray-400 mb-3">
+                        <i class="fas fa-upload text-cyber-cyan mr-2"></i>AUDIO DATA UPLOAD
+                    </h3>
+                    
+                    <div id="audio-upload-section" class="flex-1 border border-dashed border-white/20 rounded bg-black/20 hover:border-cyber-cyan/50 hover:bg-cyber-cyan/5 transition-all flex flex-col items-center justify-center p-4 cursor-pointer group/upload relative overflow-hidden">
+                        <input type="file" id="audio-file-input" accept="audio/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                        
+                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mb-2 group-hover/upload:scale-110 transition-transform text-cyber-cyan">
+                            <i class="fas fa-cloud-upload-alt text-lg"></i>
+                        </div>
+                        <p class="text-[10px] text-gray-400 font-mono group-hover/upload:text-white transition-colors">DRAG OR CLICK</p>
+                        <p id="audio-file-name" class="text-[9px] text-cyber-cyan mt-1 h-3 truncate w-full text-center"></p>
+                    </div>
+                    
+                    <button id="upload-audio-submit" class="mt-2 w-full py-1.5 bg-white/5 text-gray-500 text-[10px] rounded border border-white/10 font-bold font-mono tracking-wider transition-all" disabled>
+                        ANALYZE FILE
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: 底部仪表盘 (4等分) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-40">
+            
+            <!-- 模块 1: 时间监控 -->
+            <div class="cyber-panel rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <span class="text-[10px] font-mono text-gray-500">SESSION TIMER</span>
+                    <i class="fas fa-clock text-cyber-cyan/50"></i>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-mono font-bold text-white" id="total-time">00:00</span>
+                    <span class="text-xs text-gray-500">ELAPSED</span>
+                </div>
+                <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
+                    <div class="h-full bg-cyber-cyan w-1/2 animate-pulse"></div>
+                </div>
+                <div class="flex justify-between text-[10px] font-mono text-gray-400 mt-2">
+                    <span>AVG: <span id="avg-time" class="text-cyber-green">0s</span></span>
+                    <span>REM: <span id="remaining-time" class="text-orange-400">60:00</span></span>
+                </div>
+            </div>
+
+            <!-- 模块 2: 表情统计简报 -->
+            <div class="cyber-panel rounded-xl p-4 flex flex-col">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-mono text-gray-500">EMOTION SPECTRUM</span>
+                    <i class="fas fa-chart-pie text-cyber-purple/50"></i>
+                </div>
+                <div class="flex-1 flex items-center justify-between gap-2">
+                    <!-- 简化的可视化 -->
+                    <div class="flex-1 space-y-1.5" id="emotion-stats-mini">
+                        <div class="flex items-center gap-2 text-[9px] font-mono text-gray-400">
+                            <span class="w-8">POS</span>
+                            <div class="flex-1 h-1 bg-white/10 rounded"><div class="w-[0%] h-full bg-cyber-green transition-all" id="bar-pos"></div></div>
+                        </div>
+                        <div class="flex items-center gap-2 text-[9px] font-mono text-gray-400">
+                            <span class="w-8">NEU</span>
+                            <div class="flex-1 h-1 bg-white/10 rounded"><div class="w-[0%] h-full bg-white transition-all" id="bar-neu"></div></div>
+                        </div>
+                        <div class="flex items-center gap-2 text-[9px] font-mono text-gray-400">
+                            <span class="w-8">NEG</span>
+                            <div class="flex-1 h-1 bg-white/10 rounded"><div class="w-[0%] h-full bg-cyber-red transition-all" id="bar-neg"></div></div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                         <span class="block text-2xl font-bold font-hud text-white" id="detection-count">0</span>
+                         <span class="text-[9px] text-gray-500">FRAMES</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模块 3: 健康贴士 -->
+            <div class="cyber-panel rounded-xl p-4 relative overflow-hidden group">
+                <div class="absolute -right-4 -top-4 w-20 h-20 bg-cyber-purple/10 rounded-full blur-xl group-hover:bg-cyber-purple/20 transition-all"></div>
+                <div class="flex justify-between items-start mb-2 relative z-10">
+                    <span class="text-[10px] font-mono text-gray-500">AI ASSISTANT</span>
+                    <i class="fas fa-heartbeat text-pink-500"></i>
+                </div>
+                <p class="text-xs text-gray-300 leading-relaxed font-sans relative z-10">
+                    监测到您的心率处于正常范围。请保持均匀呼吸，如遇难以回答的问题，请依据第一直觉选择。
+                </p>
+                <button class="mt-auto text-[10px] text-cyber-cyan border border-cyber-cyan/30 px-2 py-1 rounded w-max hover:bg-cyber-cyan/10 transition-colors">
+                    REQUEST BREAK
+                </button>
+            </div>
+
+            <!-- 模块 4: 操作指南 -->
+            <div class="cyber-panel rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <span class="text-[10px] font-mono text-gray-500">CONTROLS</span>
+                    <i class="fas fa-keyboard text-gray-600"></i>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px] font-mono text-gray-400">
+                    <div class="flex items-center gap-2">
+                        <kbd class="px-1.5 py-0.5 bg-white/10 rounded border border-white/10 text-white">←</kbd> PREV
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <kbd class="px-1.5 py-0.5 bg-white/10 rounded border border-white/10 text-white">SPACE</kbd> VOICE
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <kbd class="px-1.5 py-0.5 bg-white/10 rounded border border-white/10 text-white">→[ENT]</kbd> NEXT
+                    </div>
+                </div>
+                 <div class="mt-2 text-[9px] text-gray-600 border-t border-white/5 pt-1">
+                    SYSTEM STATUS: <span class="text-cyber-green">OPTIMAL</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 隐藏的 DOM 元素（用于保持逻辑兼容） -->
+    <div id="current-question" class="hidden"></div>
+    <div id="answered-count" class="hidden"></div>
+    <div id="progress-text" class="hidden"></div>
+    <div id="current-dominant-emotion" class="hidden"></div>
+    <div id="total-detections" class="hidden"></div>
+    <div id="emotion-stats" class="hidden"></div> <!-- 旧统计容器，JS会填充，我们只取数据 -->
+
+    <!-- JavaScript 逻辑 -->
+    <script>
+        // === 核心逻辑变量 ===
+        const optionValues = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+        let currentQuestion = 1;
+        const totalQuestions = 20;
+        let answers = {};
+        let startTime = null;
+        let timerInterval = null;
+        let totalTime = 0;
+        let emotionData = { detections: [], summary: {} };
+        let isEmotionDetectionRunning = true;
+        let emotionStatsInterval = null;
+        let emotionStreamReady = false;
+        let recognition;
+        let isRecording = false;
+
+        const questionTexts = [
+            "您是否感到情绪沮丧，郁闷？", "您是否感到早晨心情最好？", "您是否要哭或想哭？",
+            "您是否夜间睡眠不好？", "您是否吃饭像平常一样多？", "您的性功能是否正常？",
+            "您是否感到体重减轻？", "您是否为便秘烦恼？", "您的心跳是否比平时快？",
+            "您是否无故感到疲乏？", "您的头脑是否像平常一样清楚？", "您做事情是否像平常一样不感到困难？",
+            "您是否坐卧难安，难以保持平静？", "您是否对未来感到有希望？", "您是否比平时更容易激怒？",
+            "您是否觉得决定什么事很容易？", "您是否感到自己是有用的和不可缺少的人？", "您的生活是否很有意思？",
+            "您是否觉得假若您死了，别人会过得更好？", "您是否仍旧喜欢自己平时喜欢的东西？"
+        ];
+
+        const emotionChinese = {
+            'angry': '愤怒', 'disgust': '厌恶', 'fear': '害怕',
+            'happy': '高兴', 'neutral': '自然', 'sad': '悲伤', 
+            'surprise': '惊讶', 'surprised': '惊讶'
+        };
+
+        // === 初始化 ===
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('SYSTEM ONLINE');
+            
+            // 系统时间
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('sys-time').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+            }, 1000);
+
+            startTimer();
+            initOptionButtons();
+            initAnswerSheet();
+            initButtonEvents();
+            initVoiceRecognition();
+            initAudioUpload(); 
+            initEmotionRecognition();
+            
+            updateQuestionCounter();
+            updateAssessmentStats(); 
+
+            // 键盘快捷键
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'ArrowRight' || e.key === 'Enter') {
+                    if (currentQuestion < totalQuestions) loadQuestion(currentQuestion + 1);
+                } else if (e.key === 'ArrowLeft') {
+                    if (currentQuestion > 1) loadQuestion(currentQuestion - 1);
+                } else if (e.code === 'Space') {
+                    e.preventDefault(); // 防止滚动
+                    document.getElementById('voice-button').click();
+                }
+            });
+            
+            // MJPEG流加载检测 (Mocked)
+            let loadingCheckCount = 0;
+            const loadingCheckInterval = setInterval(() => {
+                loadingCheckCount++;
+                const emotionStream = document.getElementById('emotion-video-stream');
+                
+                // 模拟摄像头加载成功，避免一直检测
+                emotionStreamReady = true;
+                clearInterval(loadingCheckInterval);
+                
+                setTimeout(() => {
+                    const video = document.getElementById('question-video');
+                    if (video) video.play().catch(e => console.log('Auto-play blocked, user interaction required', e));
+                }, 300);
+
+            }, 200);
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (timerInterval) clearInterval(timerInterval);
+            if (emotionStatsInterval) clearInterval(emotionStatsInterval);
+            fetch('/emotion/stop_stream', { method: 'POST', keepalive: true }).catch(console.error);
+        });
+
+        document.getElementById('back-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (timerInterval) clearInterval(timerInterval);
+            if (emotionStatsInterval) clearInterval(emotionStatsInterval);
+            
+            fetch('/emotion/stop_stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .finally(() => window.location.href = '/main');
+        });
+
+        // === 表情识别逻辑 ===
+        function initEmotionRecognition() {
+            const toggleBtn = document.getElementById('emotion-toggle-btn');
+            const videoStream = document.getElementById('emotion-video-stream');
+            
+            toggleBtn.addEventListener('click', () => {
+                isEmotionDetectionRunning = !isEmotionDetectionRunning;
+                if (isEmotionDetectionRunning) {
+                    videoStream.style.opacity = '0.8';
+                    toggleBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    toggleBtn.classList.remove('text-red-500');
+                    startEmotionStatsUpdate();
+                } else {
+                    videoStream.style.opacity = '0.2';
+                    toggleBtn.innerHTML = '<i class="fas fa-play"></i>';
+                    toggleBtn.classList.add('text-red-500');
+                    stopEmotionStatsUpdate();
+                }
+            });
+            
+            document.getElementById('emotion-reset-btn').addEventListener('click', () => {
+                 fetch('/emotion/reset', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => { if (data.success) updateEmotionStats(); });
+            });
+            
+            startEmotionStatsUpdate();
+        }
+
+        function startEmotionStatsUpdate() {
+            if (emotionStatsInterval) clearInterval(emotionStatsInterval);
+            updateEmotionStats();
+            emotionStatsInterval = setInterval(updateEmotionStats, 1000);
+        }
+
+        function stopEmotionStatsUpdate() {
+            if (emotionStatsInterval) {
+                clearInterval(emotionStatsInterval);
+                emotionStatsInterval = null;
+            }
+        }
+
+        function updateEmotionStats() {
+            if (!isEmotionDetectionRunning) return;
+            
+            fetch('/emotion/statistics')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const stats = data.data;
+                        document.getElementById('detection-count').textContent = stats.total_detections || 0;
+                        
+                        const emotionName = stats.most_common ? (emotionChinese[stats.most_common] || stats.most_common.toUpperCase()) : 'ANALYZING';
+                        const el = document.getElementById('current-emotion');
+                        el.textContent = emotionName;
+                        
+                        // 颜色更新
+                        if(stats.most_common === 'happy') el.className = "text-xl font-hud font-bold text-cyber-green";
+                        else if(stats.most_common === 'sad') el.className = "text-xl font-hud font-bold text-blue-400";
+                        else el.className = "text-xl font-hud font-bold text-white";
+
+                        emotionData.summary = stats;
+
+                        // 更新底部 Mini Bar Charts
+                        const emotions = stats.emotions || {};
+                        const happy = emotions.happy ? emotions.happy.percentage : 0;
+                        const sad = emotions.sad ? emotions.sad.percentage : 0;
+                        const neu = emotions.neutral ? emotions.neutral.percentage : 0;
+                        const angry = emotions.angry ? emotions.angry.percentage : 0;
+                        
+                        // 简单的归类: Positive, Neutral, Negative
+                        const pos = happy;
+                        const neg = sad + angry + (emotions.fear?.percentage || 0);
+                        
+                        // 为了 UI 效果，规整化一下
+                        const total = pos + neu + neg || 1;
+                        const posP = (pos / total) * 100;
+                        const neuP = (neu / total) * 100;
+                        const negP = (neg / total) * 100;
+
+                        document.getElementById('bar-pos').style.width = `${posP}%`;
+                        document.getElementById('bar-neu').style.width = `${neuP}%`;
+                        document.getElementById('bar-neg').style.width = `${negP}%`;
+
+                        // 更新左侧 Mini Bar
+                        const miniBar = document.getElementById('mini-stats-bar').firstElementChild.firstElementChild;
+                        if(miniBar) miniBar.style.width = `${Math.max(pos, neg, neu)}%`;
+                    }
+                })
+                .catch(console.error);
+        }
+
+        // === 语音识别 ===
+        function initVoiceRecognition() {
+            const voiceButton = document.getElementById('voice-button');
+            const status = document.getElementById('status');
+            const result = document.getElementById('result');
+            const wave = document.getElementById('voice-wave');
+
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'zh-CN';
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                    voiceButton.classList.add('bg-red-500/20', 'text-red-500', 'animate-pulse');
+                    voiceButton.innerHTML = '<i class="fas fa-stop"></i> 停止';
+                    status.textContent = 'LISTENING...';
+                    status.className = "text-[10px] text-cyber-cyan font-mono animate-pulse";
+                    wave.classList.remove('hidden');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcriptions = [];
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        transcriptions.push(event.results[i][0].transcript);
+                    }
+                    result.textContent = transcriptions.join('');
+                };
+
+                recognition.onerror = function(event) {
+                    status.textContent = 'ERR';
+                    status.className = "text-[10px] text-red-500 font-mono";
+                    resetVoiceButton();
+                };
+
+                recognition.onend = function() {
+                    if (isRecording) recognition.start();
+                    else resetVoiceButton();
+                };
+            } else {
+                status.textContent = 'NO MIC';
+                voiceButton.disabled = true;
+            }
+
+            voiceButton.addEventListener('click', function() {
+                if (isRecording) {
+                    isRecording = false;
+                    recognition.stop();
+                    const text = result.textContent;
+                    if (text.trim()) sendToServer(text);
+                } else {
+                    if (!recognition) initVoiceRecognition();
+                    recognition.start();
+                }
+            });
+        }
+
+        function resetVoiceButton() {
+            const voiceButton = document.getElementById('voice-button');
+            const status = document.getElementById('status');
+            const wave = document.getElementById('voice-wave');
+            
+            isRecording = false;
+            voiceButton.innerHTML = '<i class="fas fa-microphone"></i> 语音';
+            voiceButton.classList.remove('bg-red-500/20', 'text-red-500', 'animate-pulse');
+            status.textContent = 'READY';
+            status.className = "text-[10px] text-gray-500 font-mono";
+            wave.classList.add('hidden');
+        }
+
+        function sendToServer(text) {
+            const status = document.getElementById('status');
+            status.textContent = 'PROC...';
+
+            fetch('/test/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.answer) {
+                    selectOption(data.answer, data.text, true);
+                    status.textContent = 'OK:' + data.answer;
+                    status.className = "text-[10px] text-cyber-green font-mono";
+                    setTimeout(() => {
+                        if (currentQuestion < totalQuestions) loadQuestion(currentQuestion + 1);
+                    }, 1000);
+                } else {
+                    status.textContent = 'FAIL';
+                }
+            })
+            .catch(() => status.textContent = 'ERR');
+        }
+
+        // === 文件上传逻辑 ===
+        function initAudioUpload() {
+            const uploadSection = document.getElementById('audio-upload-section');
+            const fileInput = document.getElementById('audio-file-input');
+            const fileNameDisplay = document.getElementById('audio-file-name');
+            const submitBtn = document.getElementById('upload-audio-submit');
+            let selectedFile = null;
+
+            // 拖拽支持
+            uploadSection.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadSection.classList.add('bg-cyber-cyan/10', 'border-cyber-cyan');
+            });
+            uploadSection.addEventListener('dragleave', () => {
+                uploadSection.classList.remove('bg-cyber-cyan/10', 'border-cyber-cyan');
+            });
+            uploadSection.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadSection.classList.remove('bg-cyber-cyan/10', 'border-cyber-cyan');
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) handleFile(e.target.files[0]);
+            });
+
+            function handleFile(file) {
+                selectedFile = file;
+                fileNameDisplay.textContent = file.name;
+                submitBtn.disabled = false;
+                submitBtn.className = "mt-2 w-full py-1.5 bg-cyber-cyan text-black text-[10px] rounded font-bold font-mono tracking-wider hover:bg-white transition-all shadow-glow-cyan";
+                submitBtn.textContent = "START ANALYSIS";
+            }
+
+            submitBtn.addEventListener('click', () => {
+                if (!selectedFile) return;
+                const formData = new FormData();
+                formData.append('audio', selectedFile);
+                
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> PROCESSING';
+
+                fetch('/test/process', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.answer) {
+                            selectOption(data.answer, data.text, true);
+                            submitBtn.textContent = `SUCCESS: ${data.answer}`;
+                            submitBtn.className = "mt-2 w-full py-1.5 bg-cyber-green text-black text-[10px] rounded font-bold font-mono";
+                            setTimeout(() => {
+                                if (currentQuestion < totalQuestions) loadQuestion(currentQuestion + 1);
+                                submitBtn.textContent = "ANALYZE FILE";
+                                submitBtn.className = "mt-2 w-full py-1.5 bg-white/5 text-gray-500 text-[10px] rounded border border-white/10 font-bold font-mono tracking-wider";
+                                submitBtn.disabled = true;
+                                fileNameDisplay.textContent = "";
+                                selectedFile = null;
+                            }, 1500);
+                        } else {
+                            alert(data.message || 'Fail');
+                            submitBtn.textContent = "RETRY";
+                            submitBtn.disabled = false;
+                        }
+                    })
+                    .catch(() => {
+                        submitBtn.textContent = "ERROR";
+                        submitBtn.disabled = false;
+                    });
+            });
+        }
+
+        // === 答题核心逻辑 ===
+        function selectOption(optionKey, sourceText = '', isVoiceInput = false) {
+            document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('option-selected'));
+            
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                const text = btn.innerText; // 包含 A/B/C/D
+                if (text.includes(optionKey)) {
+                    btn.classList.add('option-selected');
+                    answers[currentQuestion] = {
+                        option: optionKey,
+                        value: optionValues[optionKey],
+                        source: isVoiceInput ? 'voice' : 'manual'
+                    };
+                    updateAnswerSheet();
+                }
+            });
+        }
+
+        function initOptionButtons() {
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const optionKey = this.querySelector('.font-mono').textContent.trim(); 
+                    selectOption(optionKey, '', false);
+                    setTimeout(() => {
+                        if (currentQuestion < totalQuestions) loadQuestion(currentQuestion + 1);
+                        else if (Object.keys(answers).length === totalQuestions) submitAssessment(true);
+                    }, 500);
+                });
+            });
+        }
+
+        function initAnswerSheet() {
+            const container = document.getElementById('answer-sheet');
+            container.innerHTML = '';
+            for (let i = 1; i <= totalQuestions; i++) {
+                const btn = document.createElement('button');
+                btn.className = `h-7 w-full rounded bg-white/5 border border-white/10 text-[10px] font-mono text-gray-500 hover:border-cyber-cyan/50 transition-all ${i===currentQuestion ? 'border-cyber-cyan text-white shadow-glow-cyan' : ''}`;
+                btn.textContent = i;
+                btn.onclick = () => loadQuestion(i);
+                container.appendChild(btn);
+            }
+        }
+
+        function updateAnswerSheet() {
+            const btns = document.getElementById('answer-sheet').children;
+            for (let i = 0; i < btns.length; i++) {
+                const qNum = i + 1;
+                let cls = 'h-7 w-full rounded text-[10px] font-mono transition-all border ';
+                
+                if (qNum === currentQuestion) {
+                    cls += 'bg-cyber-cyan/20 border-cyber-cyan text-white shadow-glow-cyan z-10';
+                } else if (answers[qNum]) {
+                    cls += 'bg-cyber-green/10 border-cyber-green/50 text-cyber-green';
+                } else {
+                    cls += 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10';
+                }
+                btns[i].className = cls;
+            }
+        }
+
+        function updateQuestionCounter() {
+            document.getElementById('current-question-num-bg').textContent = currentQuestion.toString().padStart(2, '0');
+            
+            const video = document.getElementById('question-video');
+            const source = document.getElementById('video-source');
+            source.src = `/static/video/${currentQuestion}.mp4`;
+            video.load();
+            if (emotionStreamReady) setTimeout(() => video.play().catch(e => console.log(e)), 300);
+
+            document.getElementById('question-text').textContent = questionTexts[currentQuestion - 1];
+            
+            const progress = (Object.keys(answers).length / totalQuestions) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        function loadQuestion(num) {
+            currentQuestion = num;
+            updateQuestionCounter();
+            updateAnswerSheet();
+            
+            document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('option-selected'));
+            if (answers[num]) {
+                const key = answers[num].option;
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    if (btn.querySelector('.font-mono').textContent.trim() === key) btn.classList.add('option-selected');
+                });
+            }
+        }
+
+        function initButtonEvents() {
+            document.getElementById('prev-button').onclick = () => {
+                if (currentQuestion > 1) loadQuestion(currentQuestion - 1);
+            };
+            document.getElementById('next-button').onclick = () => {
+                if (currentQuestion < totalQuestions) loadQuestion(currentQuestion + 1);
+            };
+        }
+
+        // === 计时器 ===
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                totalTime = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(totalTime / 60).toString().padStart(2, '0');
+                const secs = (totalTime % 60).toString().padStart(2, '0');
+                document.getElementById('total-time').textContent = `${mins}:${secs}`;
+                
+                const left = 3600 - totalTime;
+                if (left <= 0) { clearInterval(timerInterval); submitAssessment(true); }
+                const lMins = Math.floor(left / 60).toString().padStart(2, '0');
+                const lSecs = (left % 60).toString().padStart(2, '0');
+                document.getElementById('remaining-time').textContent = `${lMins}:${lSecs}`;
+            }, 1000);
+        }
+        
+        function updateAssessmentStats() {
+             const answeredCount = Object.keys(answers).length;
+             if (answeredCount > 0) {
+                const avgTime = Math.round(totalTime / answeredCount);
+                document.getElementById('avg-time').textContent = `${avgTime}s`;
+            }
+        }
+
+        // === 提交逻辑 ===
+        function submitAssessment(isAuto = false) {
+            if (!isAuto && Object.keys(answers).length < totalQuestions) {
+                if (!confirm(`还有 ${totalQuestions - Object.keys(answers).length} 题未做，确定提交吗？`)) return;
+            }
+            
+            if (timerInterval) clearInterval(timerInterval);
+            stopEmotionStatsUpdate();
+
+            fetch('/emotion/statistics')
+                .then(res => res.json())
+                .then(data => { if(data.success) emotionData.summary = data.data; })
+                .finally(() => {
+                    const payload = {
+                        answers: answers,
+                        totalTime: totalTime,
+                        emotionData: emotionData
+                    };
+                    
+                    fetch('/SDS/submit_with_emotion', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) showResultsModal(data);
+                        else alert('Error: ' + data.error);
+                    });
+                });
+        }
+
+        function showResultsModal(data) {
+            const res = data.comprehensive_result;
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-[100] bg-black/90 backdrop-blur flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="cyber-panel w-full max-w-lg p-8 relative rounded-xl shadow-glow-cyan border-cyber-cyan">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    
+                    <div class="text-center mb-8">
+                        <div class="w-20 h-20 mx-auto bg-cyber-cyan/10 rounded-full flex items-center justify-center border border-cyber-cyan mb-4 shadow-glow-cyan">
+                            <i class="fas fa-check text-4xl text-cyber-cyan"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white tracking-widest font-tech">ASSESSMENT COMPLETE</h2>
+                    </div>
+                    
+                    <div class="bg-white/5 rounded-lg p-6 mb-8 border border-white/10 flex justify-between items-center">
+                        <div>
+                            <div class="text-xs text-gray-500 font-mono mb-1">SCORE</div>
+                            <div class="text-4xl font-bold text-cyber-cyan font-mono">${res.comprehensive_score.toFixed(1)}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-gray-500 font-mono mb-1">RESULT</div>
+                            <div class="text-xl font-bold text-white">${data.result}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="window.location.href='/history'" class="py-3 bg-cyber-cyan hover:bg-white text-black font-bold rounded transition-colors tracking-wider font-hud">
+                            VIEW REPORT
+                        </button>
+                        <button onclick="window.location.href='/main'" class="py-3 bg-transparent border border-white/20 hover:border-white text-white rounded transition-colors tracking-wider font-hud">
+                            EXIT
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>

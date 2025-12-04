@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>综合评分详情 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #050b14; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-tech-primary selection:text-black pb-6">
+    
+    <!-- Background Scan Line -->
+    <div class="fixed inset-0 pointer-events-none opacity-10 bg-scan-line animate-scan z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="h-16 border-b border-tech-primary/20 bg-tech-panel/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="w-full max-w-[1920px] mx-auto h-full px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-6">
+                <form action="/history" method="GET" class="inline">
+                    <button type="submit" class="group flex items-center space-x-2 text-gray-400 hover:text-tech-primary transition-colors">
+                        <div class="w-8 h-8 flex items-center justify-center border border-gray-700 rounded group-hover:border-tech-primary group-hover:shadow-neon transition-all bg-black/40">
+                            <i class="fas fa-arrow-left text-xs"></i>
+                        </div>
+                        <span class="font-bold tracking-wider text-xs">返回历史记录</span>
+                    </button>
+                </form>
+                <div class="h-6 w-px bg-white/10"></div>
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-tech-primary to-tech-secondary rounded flex items-center justify-center shadow-neon">
+                        <i class="fas fa-brain text-white text-xs"></i>
+                    </div>
+                    <span class="text-xl font-bold font-tech text-white tracking-wider">综合评估分析</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                 <div class="text-xs font-mono text-gray-500">用户: <span class="text-tech-primary">{{ user_name }}</span></div>
+                 <div class="w-8 h-8 rounded border border-tech-primary/30 flex items-center justify-center text-tech-primary bg-tech-primary/5 shadow-[0_0_5px_rgba(0,240,255,0.2)]">
+                    <i class="fas fa-wifi"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full max-w-[1440px] mx-auto px-6 py-8 relative z-10 flex flex-col gap-6">
+        
+        {% if comprehensive_result %}
+        
+        <!-- Top Score Section -->
+        <div class="cyber-panel panel-3d-top p-8 text-center group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-tech-primary/20 to-tech-secondary/20 rounded-full flex items-center justify-center border border-tech-primary/50 shadow-neon animate-pulse-slow">
+                <i class="fas fa-chart-pie text-tech-primary text-3xl"></i>
+            </div>
+            
+            <h1 class="text-4xl font-bold text-white mb-2 font-tech tracking-wider">多模态心理评估</h1>
+            <p class="text-gray-400 font-mono text-sm mb-4">AI 驱动的心理健康分析</p>
+            
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded border border-white/10 text-xs font-mono text-gray-500">
+                <span>{{ test.finish_time }}</span>
+                <span class="text-tech-primary">|</span>
+                <span>ID: #{{ test.id }}</span>
+            </div>
+        </div>
+
+        <!-- Comprehensive Score Card -->
+        <div class="cyber-panel panel-3d-top p-8 text-center group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <h2 class="text-xl font-bold text-gray-400 mb-6 font-mono tracking-widest">综合评分</h2>
+            <div class="text-7xl font-bold text-tech-primary font-tech mb-2 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]">
+                {{ "%.1f"|format(comprehensive_result.comprehensive_score) }}
+            </div>
+            <div class="text-xs text-gray-500 font-mono mb-6">最高分: 100.0</div>
+            
+            <div class="text-3xl font-bold mb-6 font-tech tracking-wider 
+                {% if test.result == '无抑郁' %}text-tech-success{% elif test.result == '轻度抑郁' %}text-tech-warning{% elif test.result == '中度抑郁' %}text-orange-500{% elif test.result == '重度抑郁' %}text-tech-danger{% else %}text-gray-400{% endif %}">
+                {{ test.result }}
+            </div>
+            
+            <div class="inline-flex items-center px-4 py-2 rounded bg-tech-primary/10 border border-tech-primary/30 text-tech-primary text-xs font-mono">
+                <i class="fas fa-shield-alt mr-2"></i>
+                置信度: {% if comprehensive_result.confidence == 'high' %}高{% elif comprehensive_result.confidence == 'medium' %}中{% else %}低{% endif %}
+            </div>
+        </div>
+
+        <!-- Detailed Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- SDS Analysis -->
+            <div class="cyber-panel panel-3d-top p-6 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <h4 class="text-lg font-bold text-tech-primary mb-6 flex items-center font-tech tracking-wider">
+                    <i class="fas fa-clipboard-list mr-3"></i> SDS 问卷评分
+                </h4>
+                
+                <div class="space-y-4">
+                    <div class="bg-white/5 rounded p-4 border border-white/5 flex justify-between items-center">
+                        <span class="text-xs text-gray-400 font-mono">原始分数</span>
+                        <span class="text-2xl font-bold text-white font-tech">{{ test.score }} <span class="text-xs text-gray-600">/ 80</span></span>
+                    </div>
+                    <div class="bg-white/5 rounded p-4 border border-white/5">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs text-gray-400 font-mono">权重占比</span>
+                            <span class="text-lg font-bold text-tech-primary font-mono">{{ "%.0f"|format(comprehensive_result.weights.sds_score * 100) }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-tech-primary h-full rounded-full shadow-[0_0_10px_cyan]" style="width: {{ "%.0f"|format(comprehensive_result.weights.sds_score * 100) }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emotion Analysis -->
+            <div class="cyber-panel panel-3d-top p-6 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <h4 class="text-lg font-bold text-tech-secondary mb-6 flex items-center font-tech tracking-wider">
+                    <i class="fas fa-eye mr-3"></i> 视觉情感 AI 分析
+                </h4>
+                
+                <div class="space-y-4">
+                    <div class="bg-white/5 rounded p-4 border border-white/5 flex justify-between items-center">
+                        <span class="text-xs text-gray-400 font-mono">AI 评分</span>
+                        <span class="text-2xl font-bold text-white font-tech">{{ "%.1f"|format(comprehensive_result.components.emotion_score) }} <span class="text-xs text-gray-600">/ 100</span></span>
+                    </div>
+                    <div class="bg-white/5 rounded p-4 border border-white/5">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs text-gray-400 font-mono">权重占比</span>
+                            <span class="text-lg font-bold text-tech-secondary font-mono">{{ "%.0f"|format(comprehensive_result.weights.emotion_score * 100) }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-tech-secondary h-full rounded-full shadow-[0_0_10px_#d946ef]" style="width: {{ "%.0f"|format(comprehensive_result.weights.emotion_score * 100) }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emotion Details -->
+        {% if emotion_data and emotion_data.summary and emotion_data.summary.total_detections > 0 %}
+        {% set emotion_map = {'happy': '高兴', 'sad': '悲伤', 'neutral': '平静', 'angry': '愤怒', 'fear': '恐惧', 'surprise': '惊讶', 'disgust': '厌恶'} %}
+        <div class="cyber-panel panel-3d-top p-6 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <h4 class="text-lg font-bold text-white mb-6 flex items-center font-tech tracking-wider">
+                <i class="fas fa-chart-bar mr-3 text-tech-secondary"></i> 情感指标详情
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white/5 rounded p-4 border border-white/5 text-center">
+                    <div class="text-xs text-gray-500 font-mono mb-1">主导情绪</div>
+                    <div class="text-xl font-bold text-tech-secondary">
+                        {{ emotion_map[emotion_data.summary.dominant_emotion] if emotion_data.summary.dominant_emotion in emotion_map else emotion_data.summary.dominant_emotion }}
+                    </div>
+                    {% if emotion_data.summary.emotion_percentages and emotion_data.summary.dominant_emotion in emotion_data.summary.emotion_percentages %}
+                    <div class="text-xs text-gray-400 mt-1">{{ "%.1f"|format(emotion_data.summary.emotion_percentages[emotion_data.summary.dominant_emotion]) }}%</div>
+                    {% else %}
+                    <div class="text-xs text-gray-400 mt-1">--</div>
+                    {% endif %}
+                </div>
+                <div class="bg-white/5 rounded p-4 border border-white/5 text-center">
+                    <div class="text-xs text-gray-500 font-mono mb-1">样本总数</div>
+                    <div class="text-xl font-bold text-white">{{ emotion_data.summary.total_detections }}</div>
+                    <div class="text-xs text-gray-400 mt-1">分析帧数</div>
+                </div>
+                <div class="bg-white/5 rounded p-4 border border-white/5 text-center">
+                    <div class="text-xs text-gray-500 font-mono mb-1">情感指数</div>
+                    <div class="text-xl font-bold text-tech-primary">{{ "%.1f"|format(comprehensive_result.components.emotion_score) }}</div>
+                    <div class="text-xs text-gray-400 mt-1">归一化</div>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-tech-secondary/5 border border-tech-secondary/20 rounded text-xs text-gray-300 font-mono leading-relaxed">
+                {{ comprehensive_result.components.emotion_details.analysis }}
+            </div>
+        </div>
+        {% else %}
+        <div class="cyber-panel panel-3d-top p-6 group relative border-tech-warning/30">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            <div class="flex items-center gap-4 text-tech-warning">
+                <i class="fas fa-exclamation-triangle text-2xl"></i>
+                <div>
+                    <h4 class="font-bold font-mono">无视觉数据</h4>
+                    <p class="text-xs text-gray-400">由于缺少摄像头输入，评估主要依赖问卷回答。</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Professional Report -->
+        <div class="cyber-panel panel-3d-top p-8 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <h4 class="text-lg font-bold text-white mb-6 flex items-center font-tech tracking-wider">
+                <i class="fas fa-file-medical-alt mr-3 text-tech-success"></i> 临床分析报告
+            </h4>
+            
+            <div class="bg-black/30 border border-white/10 rounded p-6 text-sm text-gray-300 font-mono leading-relaxed tracking-wide">
+                {{ comprehensive_result.analysis | replace('\n', '<br>') | safe }}
+            </div>
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="flex justify-center space-x-4 mt-4 mb-8">
+            <button onclick="window.print()" class="flex items-center space-x-2 bg-tech-primary hover:bg-white text-black border border-tech-primary px-6 py-3 rounded font-bold transition-all shadow-neon hover:scale-105 font-tech">
+                <i class="fas fa-print"></i>
+                <span>打印报告</span>
+            </button>
+            
+            <form action="/history" method="GET" class="inline">
+                <button type="submit" class="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 px-6 py-3 rounded font-bold transition-all font-tech">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>返回</span>
+                </button>
+            </form>
+        </div>
+
+        {% else %}
+        <!-- No Data State -->
+        <div class="cyber-panel panel-3d-top p-12 text-center group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <div class="w-20 h-20 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
+                <i class="fas fa-database text-gray-500 text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2 font-tech">数据不完整</h3>
+            <p class="text-gray-500 text-sm mb-6 font-mono">综合分析需要同时具备 SDS 问卷数据和情感数据。</p>
+            <form action="/detail" method="POST" class="inline">
+                <input type="hidden" name="test_id" value="{{ test.id }}">
+                <button type="submit" class="bg-tech-primary hover:bg-white text-black px-6 py-2 rounded font-bold font-mono transition-all shadow-neon">
+                    查看原始 SDS 数据
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </main>
+
+    <!-- JS -->
+    <script>
+        // Print Styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @media print {
+                body { background: white !important; color: black !important; }
+                nav, button, .no-print { display: none !important; }
+                .cyber-panel { box-shadow: none !important; border: 1px solid #ccc !important; background: white !important; color: black !important; }
+                .text-white, .text-gray-300, .text-gray-400, .text-gray-500 { color: black !important; }
+                .bg-white\\/5, .bg-black\\/30 { background: transparent !important; border: 1px solid #eee !important; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

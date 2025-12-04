@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        /* Toggle Switch Tech Style */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; width: 16px;
+            left: 3px; bottom: 3px;
+            background-color: #888;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: rgba(0, 240, 255, 0.2);
+            border-color: #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+            background-color: #00f0ff;
+            box-shadow: 0 0 10px #00f0ff;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-tech-primary selection:text-black pb-6">
+    
+    <!-- Background Scan Line -->
+    <div class="fixed inset-0 pointer-events-none opacity-10 bg-scan-line animate-scan z-0"></div>
+
+    <div class="flex-1 w-full max-w-2xl mx-auto py-12 px-4 relative z-10">
+        <div class="cyber-panel panel-3d-top rounded-xl group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+
+            <div class="p-6 border-b border-white/10 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-tech-primary/10 rounded flex items-center justify-center border border-tech-primary/30">
+                        <i class="fas fa-cog text-tech-primary animate-spin-slow"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-white font-tech tracking-wider">系统配置</h1>
+                </div>
+                <button onclick="history.back()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-2">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between p-4 hover:bg-white/5 border border-transparent hover:border-tech-primary/30 rounded-lg cursor-pointer transition-all group/item">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 flex items-center justify-center bg-tech-primary/10 rounded-lg border border-tech-primary/20 text-tech-primary group-hover/item:shadow-glow-cyan transition-all">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="text-gray-300 font-mono text-sm group-hover/item:text-white">用户资料</span>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-600 group-hover/item:text-tech-primary"></i>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 hover:bg-white/5 border border-transparent hover:border-tech-primary/30 rounded-lg cursor-pointer transition-all group/item">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 flex items-center justify-center bg-tech-secondary/10 rounded-lg border border-tech-secondary/20 text-tech-secondary group-hover/item:shadow-[0_0_10px_rgba(217,70,239,0.3)] transition-all">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <span class="text-gray-300 font-mono text-sm group-hover/item:text-white">安全设置</span>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-600 group-hover/item:text-tech-secondary"></i>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 hover:bg-white/5 border border-transparent hover:border-white/10 rounded-lg transition-all">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 flex items-center justify-center bg-white/5 rounded-lg border border-white/10 text-gray-400">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <span class="text-gray-300 font-mono text-sm">通知提醒</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 hover:bg-white/5 border border-transparent hover:border-white/10 rounded-lg transition-all">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 flex items-center justify-center bg-white/5 rounded-lg border border-white/10 text-gray-400">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <span class="text-gray-300 font-mono text-sm">日程提醒</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 hover:bg-white/5 border border-transparent hover:border-tech-primary/30 rounded-lg cursor-pointer transition-all group/item">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 flex items-center justify-center bg-tech-primary/10 rounded-lg border border-tech-primary/20 text-tech-primary">
+                                <i class="fas fa-microphone"></i>
+                            </div>
+                            <span class="text-gray-300 font-mono text-sm group-hover/item:text-white">音频输入</span>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-600 group-hover/item:text-tech-primary"></i>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 hover:bg-white/5 border border-transparent hover:border-tech-primary/30 rounded-lg cursor-pointer transition-all group/item">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 flex items-center justify-center bg-tech-primary/10 rounded-lg border border-tech-primary/20 text-tech-primary">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <span class="text-gray-300 font-mono text-sm group-hover/item:text-white">AI 模型</span>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-600 group-hover/item:text-tech-primary"></i>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 hover:bg-white/5 border border-transparent hover:border-white/10 rounded-lg cursor-pointer transition-all group/item">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 flex items-center justify-center bg-white/5 rounded-lg border border-white/10 text-gray-400">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <span class="text-gray-300 font-mono text-sm group-hover/item:text-white">关于系统</span>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-white/10">
+                <div class="grid grid-cols-2 gap-4">
+                    <button class="w-full px-4 py-3 bg-tech-primary hover:bg-white text-black font-bold font-mono rounded shadow-neon transition-all hover:scale-105">
+                        切换用户
+                    </button>
+                    <button class="w-full px-4 py-3 border border-tech-danger text-tech-danger hover:bg-tech-danger/10 font-bold font-mono rounded transition-all hover:scale-105">
+                        退出登录
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-6">
+            <p class="text-[10px] text-gray-600 font-mono">系统版本 4.0.1 // 构建 2024.05</p>
+        </div>
+    </div>
+</body>
+</html>

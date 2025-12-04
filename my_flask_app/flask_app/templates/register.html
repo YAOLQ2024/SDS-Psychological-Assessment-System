@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        .input-tech {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(30, 41, 59, 0.8);
+            color: #e2e8f0;
+            transition: all 0.3s;
+        }
+        .input-tech:focus {
+            background: rgba(0, 240, 255, 0.05);
+            border-color: #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+            outline: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden">
+    
+    <!-- 背景扫描线 -->
+    <div class="fixed inset-0 pointer-events-none opacity-20 bg-scan-line animate-scan"></div>
+
+    <!-- 主容器 -->
+    <div class="relative z-10 w-full max-w-md mx-4">
+        <!-- 注册卡片 -->
+        <div class="cyber-panel panel-3d-top p-8 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+
+            <!-- 头部 -->
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-tech-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-tech-secondary/30 shadow-[0_0_15px_rgba(217,70,239,0.2)]">
+                    <i class="fas fa-user-plus text-4xl text-tech-secondary animate-pulse-slow"></i>
+                </div>
+                <h1 class="text-2xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-tech-secondary to-tech-primary drop-shadow-[0_0_10px_rgba(217,70,239,0.5)]" style="font-family: 'Orbitron', sans-serif;">
+                    新用户注册
+                </h1>
+                <p class="text-tech-secondary/70 text-xs font-mono tracking-widest mt-2">初始化档案</p>
+            </div>
+            
+            <!-- 标签切换 -->
+            <div class="flex bg-black/40 rounded-xl p-1 mb-6 border border-white/5">
+                <form action="/login" method="GET" class="flex-1">
+                    <button type="submit" class="w-full py-2 px-4 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 font-medium transition-all duration-300">
+                        登录
+                    </button>
+                </form>
+                <button class="flex-1 py-2 px-4 rounded-lg bg-tech-secondary/20 text-tech-secondary font-bold border border-tech-secondary/30 shadow-[0_0_10px_rgba(217,70,239,0.1)] transition-all">
+                    注册
+                </button>
+            </div>
+            
+            <!-- 注册表单 -->
+            <form method="post" class="space-y-4">
+                <div>
+                    <label class="block text-tech-secondary/80 text-xs font-mono mb-2 ml-1">用户名</label>
+                    <div class="relative group/input">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-500 group-hover/input:text-tech-secondary transition-colors"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            name="name" 
+                            class="w-full pl-12 pr-4 py-3 rounded-lg input-tech text-sm font-mono placeholder-gray-600 focus:!border-tech-secondary focus:!shadow-[0_0_10px_rgba(217,70,239,0.2)]"
+                            placeholder="请输入用户名"
+                            required
+                        >
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-tech-secondary/80 text-xs font-mono mb-2 ml-1">手机号</label>
+                    <div class="relative group/input">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-mobile-alt text-gray-500 group-hover/input:text-tech-secondary transition-colors"></i>
+                        </div>
+                        <input 
+                            type="tel" 
+                            name="mobile" 
+                            class="w-full pl-12 pr-4 py-3 rounded-lg input-tech text-sm font-mono placeholder-gray-600 focus:!border-tech-secondary focus:!shadow-[0_0_10px_rgba(217,70,239,0.2)]"
+                            placeholder="请输入手机号"
+                            pattern="[0-9]{11}"
+                            required
+                        >
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-tech-secondary/80 text-xs font-mono mb-2 ml-1">密码</label>
+                    <div class="relative group/input">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-500 group-hover/input:text-tech-secondary transition-colors"></i>
+                        </div>
+                        <input 
+                            type="password" 
+                            name="password" 
+                            id="password"
+                            class="w-full pl-12 pr-4 py-3 rounded-lg input-tech text-sm font-mono placeholder-gray-600 focus:!border-tech-secondary focus:!shadow-[0_0_10px_rgba(217,70,239,0.2)]"
+                            placeholder="请输入密码"
+                            minlength="6"
+                            required
+                        >
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-tech-secondary/80 text-xs font-mono mb-2 ml-1">确认密码</label>
+                    <div class="relative group/input">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-500 group-hover/input:text-tech-secondary transition-colors"></i>
+                        </div>
+                        <input 
+                            type="password" 
+                            name="password2" 
+                            id="password2"
+                            class="w-full pl-12 pr-4 py-3 rounded-lg input-tech text-sm font-mono placeholder-gray-600 focus:!border-tech-secondary focus:!shadow-[0_0_10px_rgba(217,70,239,0.2)]"
+                            placeholder="请再次输入密码"
+                            minlength="6"
+                            required
+                        >
+                    </div>
+                </div>
+                
+                <!-- 错误提示 -->
+                {% if error %}
+                <div class="bg-tech-danger/10 border border-tech-danger/30 rounded-lg p-3 flex items-center gap-2">
+                    <i class="fas fa-exclamation-circle text-tech-danger"></i>
+                    <p class="text-tech-danger text-xs font-mono">{{ error }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- 注册按钮 -->
+                <button type="submit" class="w-full bg-gradient-to-r from-tech-secondary/80 to-tech-primary/80 hover:from-tech-secondary hover:to-tech-primary text-white py-3 rounded-lg font-bold tracking-widest shadow-neon transition-all transform hover:scale-[1.02] border border-white/20 font-tech">
+                    <i class="fas fa-user-plus mr-2"></i> 注册
+                </button>
+            </form>
+            
+            <!-- 底部链接 -->
+            <div class="text-center mt-6 pt-4 border-t border-white/5">
+                <form action="/login" method="GET" class="inline">
+                    <span class="text-gray-500 text-xs">已有账号？</span>
+                    <button type="submit" class="text-tech-secondary hover:text-white font-bold text-xs transition-colors ml-1 font-mono">
+                        立即登录 ->
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 底部提示 -->
+        <div class="text-center mt-6">
+            <p class="text-gray-600 text-[10px] font-mono tracking-widest">
+                SDS 系统 v4.0.1 · 神经链接已建立
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        const password = document.getElementById('password');
+        const password2 = document.getElementById('password2');
+        
+        function validatePassword() {
+            if (password.value !== password2.value) {
+                password2.setCustomValidity('两次输入的密码不一致');
+            } else {
+                password2.setCustomValidity('');
+            }
+        }
+        
+        password.addEventListener('change', validatePassword);
+        password2.addEventListener('keyup', validatePassword);
+    </script>
+</body>
+</html>

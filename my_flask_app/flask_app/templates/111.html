@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音识别</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#FF7D00',
+                        neutral: '#F5F7FA',
+                        dark: '#1D2129'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .btn-hover {
+                @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
+            }
+            .btn-neutral {
+                @apply bg-white text-primary border border-primary/30 rounded-full px-8 py-4 font-medium text-lg shadow-sm hover:bg-primary/5 active:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30;
+            }
+            .btn-active {
+                @apply bg-red-500 text-white border-red-500 hover:bg-red-600 active:bg-red-700 focus:ring-red-300;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+        <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-dark mb-6">语音答题</h1>
+
+        <div class="mb-8">
+
+            <button class="btn-neutral flex items-center space-x-2 mx-auto" id="voice-button">
+                <i class="fas fa-volume-up"></i>
+                <span>语音答题</span>
+            </button>
+
+            <p id="status" class="mt-4 text-gray-600"></p>
+        </div>
+
+        <div class="bg-gray-50 rounded-xl p-4 mb-6 min-h-[100px] flex items-center justify-center">
+            <p id="result" class="text-dark text-lg"></p>
+        </div>
+
+        <div id="response" class="hidden mt-6 p-4 bg-green-50 rounded-xl">
+            <h3 class="font-semibold text-green-700 mb-2">服务器响应</h3>
+            <p id="server-response" class="text-green-800"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const voiceButton = document.getElementById('voice-button');
+            const status = document.getElementById('status');
+            const result = document.getElementById('result');
+            const loading = document.getElementById('loading');
+            const response = document.getElementById('response');
+            const serverResponse = document.getElementById('server-response');
+
+            let recognition;
+            let isRecording = false;
+
+            // 初始化语音识别
+            function initRecognition() {
+                if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = 'zh-CN';
+
+                    recognition.onstart = function() {
+                        isRecording = true;
+                        voiceButton.classList.add('btn-active');
+                        voiceButton.querySelector('i').className = 'fas fa-stop';
+                        voiceButton.querySelector('span').textContent = '停止';
+                        status.textContent = '正在聆听...';
+                        status.classList.add('text-green-500');
+                        result.textContent = '';
+                        response.classList.add('hidden');
+                    };
+
+                    recognition.onresult = function(event) {
+                        const transcriptions = [];
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            transcriptions.push(event.results[i][0].transcript);
+                        }
+                        result.textContent = transcriptions.join('');
+                    };
+
+                    recognition.onerror = function(event) {
+                        console.error('语音识别错误:', event.error);
+                        status.textContent = `识别错误: ${event.error}`;
+                        status.classList.add('text-red-500');
+                        stopRecording();
+                    };
+
+                    recognition.onend = function() {
+                        if (isRecording) {
+                            recognition.start();
+                        } else {
+                            resetButton();
+                        }
+                    };
+                } else {
+                    status.textContent = '您的浏览器不支持语音识别功能';
+                    status.classList.add('text-red-500');
+                    voiceButton.disabled = true;
+                    voiceButton.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+            // 重置按钮状态
+            function resetButton() {
+                isRecording = false;
+                voiceButton.classList.remove('btn-active');
+                voiceButton.querySelector('i').className = 'fas fa-volume-up';
+                voiceButton.querySelector('span').textContent = '语音答题';
+                status.textContent = '点击按钮开始录音';
+                status.classList.remove('text-green-500', 'text-red-500');
+            }
+
+            // 开始录音
+            function startRecording() {
+                if (!recognition) {
+                    initRecognition();
+                }
+                recognition.start();
+            }
+
+            // 停止录音
+            function stopRecording() {
+                isRecording = false;
+                recognition.stop();
+            }
+
+            // 发送语音内容到服务器
+            function sendToServer(text) {
+                if (!text.trim()) {
+                    status.textContent = '没有语音内容可发送';
+                    status.classList.add('text-yellow-500');
+                    setTimeout(() => {
+                        status.classList.remove('text-yellow-500');
+                        status.textContent = '点击按钮开始录音';
+                    }, 2000);
+                    return;
+                }
+
+                loading.classList.remove('hidden');
+                status.textContent = '正在发送到服务器...';
+
+                fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.classList.add('hidden');
+                    serverResponse.textContent = data.message || '处理完成';
+                    response.classList.remove('hidden');
+                    status.textContent = '发送成功';
+                    status.classList.add('text-green-500');
+
+                    setTimeout(() => {
+                        status.classList.remove('text-green-500');
+                        status.textContent = '点击按钮开始录音';
+                    }, 2000);
+                })
+                .catch(error => {
+                    loading.classList.add('hidden');
+                    status.textContent = '发送失败';
+                    status.classList.add('text-red-500');
+                    console.error('Error:', error);
+
+                    setTimeout(() => {
+                        status.classList.remove('text-red-500');
+                        status.textContent = '点击按钮开始录音';
+                    }, 2000);
+                });
+            }
+
+            // 按钮点击事件
+            voiceButton.addEventListener('click', function() {
+                if (isRecording) {
+                    stopRecording();
+                    // 自动发送到服务器
+                    const text = result.textContent;
+                    sendToServer(text);
+                } else {
+                    startRecording();
+                }
+            });
+
+            // 初始化状态
+            status.textContent = '点击按钮开始录音';
+        });
+    </script>
+</body>
+</html>

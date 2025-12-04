@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        .tech-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transition: all 0.3s;
+        }
+        .tech-input:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+            background: rgba(0, 240, 255, 0.05);
+            outline: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-tech-primary selection:text-black pb-6">
+    
+    <!-- Background Scan Line -->
+    <div class="fixed inset-0 pointer-events-none opacity-10 bg-scan-line animate-scan z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="h-16 border-b border-tech-primary/20 bg-tech-panel/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="w-full max-w-[1920px] mx-auto h-full px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-6">
+                <form action="/main" method="GET" class="inline">
+                    <button type="submit" class="group flex items-center space-x-2 text-gray-400 hover:text-tech-primary transition-colors">
+                        <div class="w-8 h-8 flex items-center justify-center border border-gray-700 rounded group-hover:border-tech-primary group-hover:shadow-neon transition-all bg-black/40">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </div>
+                        <span class="font-bold tracking-wider text-xs">仪表板</span>
+                    </button>
+                </form>
+                <div class="h-6 w-px bg-white/10"></div>
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-tech-primary to-tech-secondary rounded flex items-center justify-center shadow-neon">
+                        <i class="fas fa-id-card text-white text-xs"></i>
+                    </div>
+                    <span class="text-xl font-bold font-tech text-white tracking-wider">用户资料</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                 <div class="text-xs font-mono text-gray-500">ID: <span class="text-tech-primary">8934-AF32</span></div>
+                 <div class="w-8 h-8 rounded border border-tech-primary/30 flex items-center justify-center text-tech-primary bg-tech-primary/5 shadow-[0_0_5px_rgba(0,240,255,0.2)]">
+                    <i class="fas fa-wifi"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full max-w-[1440px] mx-auto px-6 py-8 relative z-10">
+        <div class="cyber-panel panel-3d-top p-8 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <div class="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+                <h1 class="text-2xl font-bold text-white font-tech tracking-wider">个人数据</h1>
+                <button class="bg-tech-primary hover:bg-white text-black px-6 py-2 rounded font-bold font-mono transition-all shadow-neon hover:scale-105 flex items-center gap-2">
+                    <i class="fas fa-save"></i> 保存更改
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                <!-- Avatar Section -->
+                <div class="col-span-1 flex flex-col items-center">
+                    <div class="relative group/avatar cursor-pointer">
+                        <div class="w-48 h-48 rounded-full border-4 border-tech-primary/30 p-1 relative overflow-hidden group-hover/avatar:border-tech-primary group-hover/avatar:shadow-glow-cyan transition-all duration-500">
+                            <img src="https://ai-public.mastergo.com/ai/img_res/1fef3426fec07553d589b15bc15ebd9f.jpg"
+                                 alt="Avatar"
+                                 class="w-full h-full rounded-full object-cover filter grayscale group-hover/avatar:grayscale-0 transition-all duration-500">
+                            <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                <i class="fas fa-camera text-3xl text-tech-primary"></i>
+                            </div>
+                        </div>
+                        <div class="absolute bottom-2 right-2 w-10 h-10 bg-tech-panel border border-tech-primary rounded-full flex items-center justify-center text-tech-primary shadow-neon">
+                            <i class="fas fa-pen text-xs"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-500 text-xs font-mono mt-4 text-center">
+                        支持格式：JPG, PNG<br>最大大小：5MB
+                    </p>
+                </div>
+
+                <!-- Form Section -->
+                <div class="col-span-2 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-tech-primary font-mono ml-1">用户名</label>
+                            <input type="text" value="chen_siying" class="w-full px-4 py-3 rounded tech-input font-mono text-sm" placeholder="请输入用户名">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-tech-primary font-mono ml-1">手机号</label>
+                            <input type="tel" value="13812345678" class="w-full px-4 py-3 rounded tech-input font-mono text-sm" placeholder="请输入手机号">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-tech-primary font-mono ml-1">邮箱</label>
+                            <input type="email" value="chensiying@example.com" class="w-full px-4 py-3 rounded tech-input font-mono text-sm" placeholder="请输入邮箱">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-tech-primary font-mono ml-1">真实姓名</label>
+                            <input type="text" value="陈思颖" class="w-full px-4 py-3 rounded tech-input font-mono text-sm" placeholder="请输入真实姓名">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-tech-primary font-mono ml-1">性别</label>
+                            <div class="flex space-x-6 pt-2">
+                                <label class="flex items-center space-x-2 cursor-pointer group">
+                                    <div class="w-4 h-4 rounded-full border border-tech-primary flex items-center justify-center">
+                                        <div class="w-2 h-2 rounded-full bg-tech-primary"></div>
+                                    </div>
+                                    <span class="text-gray-300 group-hover:text-white font-mono text-sm">男</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer group">
+                                    <div class="w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center"></div>
+                                    <span class="text-gray-500 group-hover:text-gray-300 font-mono text-sm">女</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-tech-primary font-mono ml-1">身份证号</label>
+                            <input type="text" value="310************234" class="w-full px-4 py-3 rounded tech-input font-mono text-sm" placeholder="请输入身份证号">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-tech-primary font-mono ml-1">病史</label>
+                        <div class="relative">
+                            <select class="w-full px-4 py-3 rounded tech-input font-mono text-sm appearance-none cursor-pointer">
+                                <option>无</option>
+                                <option>轻度</option>
+                                <option>中度</option>
+                                <option>重度</option>
+                            </select>
+                            <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-tech-primary pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-tech-primary font-mono ml-1">备注</label>
+                        <textarea class="w-full px-4 py-3 rounded tech-input font-mono text-sm h-32 resize-none" placeholder="其他信息..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

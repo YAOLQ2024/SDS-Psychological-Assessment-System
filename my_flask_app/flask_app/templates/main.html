@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心理健康仪表板 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                        'spin-slow': 'spin 12s linear infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+            font-size: 16px; /* 增加基准字号 */
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.4);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 16px;
+            height: 16px;
+            opacity: 1;
+            box-shadow: 0 0 10px #00f0ff;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050b14; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-tech-primary selection:text-black pb-8">
+    
+    <!-- Background Scan Line -->
+    <div class="fixed inset-0 pointer-events-none opacity-10 bg-scan-line animate-scan z-0"></div>
+
+    <!-- Header -->
+    <header class="h-20 border-b border-tech-primary/20 bg-tech-panel/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="w-full max-w-[1920px] mx-auto h-full px-8 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded bg-gradient-to-br from-tech-primary to-tech-secondary flex items-center justify-center shadow-neon border border-white/20">
+                        <i class="fas fa-brain text-white text-xl"></i>
+                    </div>
+                    <h1 class="text-3xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-tech-primary to-tech-secondary drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]" style="font-family: 'Orbitron', sans-serif;">
+                        SDS <span class="text-lg font-normal text-white not-italic tracking-normal font-sans ml-2 opacity-90">心理评估系统</span>
+                    </h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-2 px-4 py-1 rounded border border-tech-success/30 bg-tech-success/10">
+                    <div class="w-2 h-2 rounded-full bg-tech-success animate-pulse"></div>
+                    <span class="text-sm font-mono text-tech-success">系统在线</span>
+                </div>
+                
+                <!-- User Menu -->
+                <div class="relative group/menu">
+                    <button id="userMenuButton" class="flex items-center gap-4 bg-tech-primary/10 hover:bg-tech-primary/20 border border-tech-primary/30 rounded-lg px-6 py-2.5 transition-all">
+                        <div class="w-8 h-8 bg-gradient-to-br from-tech-primary to-tech-secondary rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
+                        <span class="font-mono text-tech-primary text-base">{{ userinfo.name }}</span>
+                        <i class="fas fa-chevron-down text-tech-primary/50 text-sm"></i>
+                    </button>
+                    
+                    <!-- Dropdown -->
+                    <div id="userDropdown" class="absolute right-0 mt-3 w-56 bg-tech-panel border border-tech-primary/30 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all duration-200 transform z-50 overflow-hidden">
+                         <div class="py-1">
+                            <form action="/history" method="GET">
+                                <button type="submit" class="w-full text-left px-6 py-4 text-sm font-mono text-gray-300 hover:text-tech-primary hover:bg-tech-primary/10 flex items-center space-x-3 transition-colors">
+                                    <i class="fas fa-history w-5"></i>
+                                    <span>测评历史</span>
+                                </button>
+                            </form>
+                            <div class="h-px bg-white/10 mx-2"></div>
+                            <button id="logoutBtn" class="w-full text-left px-6 py-4 text-sm font-mono text-tech-danger hover:bg-tech-danger/10 flex items-center space-x-3 transition-colors">
+                                <i class="fas fa-sign-out-alt w-5"></i>
+                                <span>退出登录</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WiFi Icon -->
+                <div class="w-10 h-10 rounded border border-tech-primary/30 flex items-center justify-center text-tech-primary bg-tech-primary/5 shadow-[0_0_5px_rgba(0,240,255,0.2)]">
+                    <i class="fas fa-wifi text-lg"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full max-w-[1920px] mx-auto p-8 flex flex-col gap-8 relative z-10">
+        
+        <!-- Welcome Section -->
+        <div class="flex items-end justify-between mb-4">
+            <div>
+                <h1 class="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                    欢迎回来，<span class="text-tech-primary font-mono">{{ userinfo.name }}</span>
+            </h1>
+                <p class="text-gray-400 text-base font-mono">神经链接已激活 // 随时准备评估</p>
+            </div>
+            <div class="text-right">
+                 <div class="text-sm text-gray-500 font-mono">上次登录</div>
+                 <div class="text-tech-secondary text-base font-bold">{{ userinfo.last_login or 'Just now' }}</div>
+            </div>
+        </div>
+
+        <!-- Top Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- 1. Assessments Count -->
+            <div class="cyber-panel panel-3d-top p-8 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-5">
+                        <div class="w-16 h-16 bg-tech-primary/10 rounded-xl flex items-center justify-center border border-tech-primary/30 text-tech-primary group-hover:text-white group-hover:bg-tech-primary/20 transition-all shadow-glow-cyan">
+                            <i class="fas fa-chart-line text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-mono text-gray-400 mb-1">本月测评</h3>
+                            <p class="text-5xl font-bold text-white font-tech">{{ count_inmonth }}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono text-tech-primary bg-tech-primary/10 px-3 py-1.5 rounded border border-tech-primary/20">总计</span>
+                </div>
+                <div class="text-sm text-gray-500 font-mono">
+                    <i class="fas fa-calendar-alt mr-2"></i> 近 30 天
+                </div>
+            </div>
+
+            <!-- 2. Psychological Status -->
+            <div class="cyber-panel panel-3d-top p-8 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-5">
+                        <div class="w-16 h-16 bg-tech-success/10 rounded-xl flex items-center justify-center border border-tech-success/30 text-tech-success group-hover:text-white group-hover:bg-tech-success/20 transition-all shadow-[0_0_10px_rgba(5,255,161,0.2)]">
+                            <i class="fas fa-heartbeat text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-mono text-gray-400 mb-1">心理状态</h3>
+                            <p class="text-3xl font-bold font-tech 
+                                {% if status == '无抑郁' %}text-tech-success{% elif status == '轻度抑郁' %}text-tech-warning{% elif status == '中度抑郁' %}text-orange-500{% elif status == '重度抑郁' %}text-tech-danger{% else %}text-gray-400{% endif %}">
+                                {{ status }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="w-3 h-3 rounded-full 
+                        {% if status == '无抑郁' %}bg-tech-success animate-pulse{% elif status == '轻度抑郁' %}bg-tech-warning animate-pulse{% elif status == '中度抑郁' %}bg-orange-500 animate-pulse{% elif status == '重度抑郁' %}bg-tech-danger animate-pulse{% else %}bg-gray-500{% endif %}">
+                    </div>
+                </div>
+                <div class="text-sm text-gray-500 font-mono">
+                    <i class="fas fa-clock mr-2"></i> 最新结果
+                </div>
+            </div>
+
+            <!-- 3. Days Since Last -->
+            <div class="cyber-panel panel-3d-top p-8 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-5">
+                        <div class="w-16 h-16 bg-tech-secondary/10 rounded-xl flex items-center justify-center border border-tech-secondary/30 text-tech-secondary group-hover:text-white group-hover:bg-tech-secondary/20 transition-all shadow-[0_0_10px_rgba(217,70,239,0.2)]">
+                            <i class="fas fa-history text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-mono text-gray-400 mb-1">上次测评</h3>
+                            <p class="text-5xl font-bold text-white font-tech">{{ delta }}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono text-tech-secondary bg-tech-secondary/10 px-3 py-1.5 rounded border border-tech-secondary/20">天前</span>
+                </div>
+                <div class="text-sm text-gray-500 font-mono">
+                    <i class="fas fa-info-circle mr-2"></i> 建议定期检查
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Interaction Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- SDS Assessment Card (Large) - REDESIGNED & FILLED -->
+            <div class="lg:col-span-2">
+                <div class="cyber-panel panel-3d-top p-0 flex flex-col xl:flex-row h-full group relative overflow-hidden min-h-[380px]">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    
+                    <!-- Left: Main Title & Action (占比 40%) -->
+                    <div class="p-10 flex-shrink-0 w-full xl:w-[45%] flex flex-col justify-between relative z-20 bg-gradient-to-r from-tech-bg/50 to-transparent">
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                 <span class="px-3 py-1 rounded bg-tech-primary/10 border border-tech-primary/30 text-tech-primary text-xs font-mono tracking-widest">SDS-V4.0</span>
+                                 <span class="flex h-3 w-3 relative">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tech-success opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-tech-success"></span>
+                                  </span>
+                            </div>
+                            <h2 class="text-4xl lg:text-5xl font-bold text-white mb-4 font-tech tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-tech-primary leading-tight">SDS<br>抑郁自评</h2>
+                            <p class="text-gray-300 text-base mb-8 leading-relaxed">基于多模态情感计算的即时心理评估。深度分析面部微表情与语音语调，提供专业级心理健康快照。</p>
+                        </div>
+
+                        <form action="/SDS" method="GET" class="mt-auto">
+                            <button type="submit" class="group/btn relative w-full bg-tech-primary hover:bg-white text-black px-10 py-5 rounded-xl font-bold text-xl transition-all duration-300 shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_40px_rgba(0,240,255,0.6)] flex items-center justify-center gap-4 font-tech overflow-hidden">
+                                <div class="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300"></div>
+                                <i class="fas fa-play relative z-10 group-hover/btn:scale-125 transition-transform"></i>
+                                <span class="relative z-10">开始评估</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Center: Visual Connection & Features (填充空白区域) (占比 25%) -->
+                    <div class="hidden xl:flex flex-col justify-center items-center relative z-10 border-l border-r border-white/5 bg-black/10 px-6">
+                         <!-- Animated Connection Lines -->
+                        <div class="absolute inset-x-0 top-1/4 h-px bg-gradient-to-r from-transparent via-tech-primary/30 to-transparent"></div>
+                        <div class="absolute inset-x-0 bottom-1/4 h-px bg-gradient-to-r from-transparent via-tech-primary/30 to-transparent"></div>
+                        
+                        <!-- Feature Icons Grid -->
+                        <div class="space-y-8 w-full">
+                             <div class="flex items-center gap-4 group/icon">
+                                <div class="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover/icon:text-tech-primary group-hover/icon:border-tech-primary group-hover/icon:shadow-glow-cyan transition-all animate-float" style="animation-delay: 0s;">
+                                    <i class="fas fa-clock text-xl"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-gray-500 font-mono mb-0.5">预计用时</div>
+                                    <div class="text-sm font-bold text-white font-mono">10-15 分钟</div>
+                                </div>
+                             </div>
+
+                             <div class="flex items-center gap-4 group/icon">
+                                <div class="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover/icon:text-tech-secondary group-hover/icon:border-tech-secondary group-hover/icon:shadow-[0_0_10px_rgba(217,70,239,0.5)] transition-all animate-float" style="animation-delay: 1s;">
+                                    <i class="fas fa-fingerprint text-xl"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-gray-500 font-mono mb-0.5">交互模式</div>
+                                    <div class="text-sm font-bold text-white font-mono">多模态识别</div>
+                                </div>
+                             </div>
+
+                             <div class="flex items-center gap-4 group/icon">
+                                <div class="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover/icon:text-tech-success group-hover/icon:border-tech-success group-hover/icon:shadow-[0_0_10px_rgba(5,255,161,0.5)] transition-all animate-float" style="animation-delay: 2s;">
+                                    <i class="fas fa-shield-alt text-xl"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-gray-500 font-mono mb-0.5">隐私保护</div>
+                                    <div class="text-sm font-bold text-white font-mono">端对端加密</div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: AI Monitor (占比 35%) -->
+                    <div class="flex-1 bg-black/20 p-8 flex flex-col justify-center relative overflow-hidden">
+                        <!-- Background Mesh -->
+                        <div class="absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,240,255,0.03)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none"></div>
+
+                        <!-- AI Tips integrated here -->
+                        <div class="mb-8 relative z-10">
+                            <h4 class="text-sm font-bold text-tech-primary mb-4 font-mono flex items-center gap-2 tracking-wider">
+                                <i class="fas fa-robot"></i> AI 智能顾问
+                            </h4>
+                            <div class="bg-tech-panel/80 border border-tech-primary/20 p-5 rounded-lg text-sm text-gray-300 leading-relaxed font-mono backdrop-blur-sm relative group/ai">
+                                <div class="absolute -top-1 -left-1 w-3 h-3 border-t border-l border-tech-primary"></div>
+                                <div class="absolute -bottom-1 -right-1 w-3 h-3 border-b border-r border-tech-primary"></div>
+                                {% if delta > 7 %}
+                                <span class="text-tech-warning font-bold">警告:</span> 检测间隔已超时。建议立即进行状态更新以保持数据连续性。
+                                {% elif count_inmonth < 2 %}
+                                <span class="text-tech-success font-bold">提示:</span> 建立基准数据需要更多样本。建议本周再次进行评估。
+                                {% else %}
+                                <span class="text-tech-primary font-bold">信息:</span> 监测频率理想。系统运行在最佳状态。
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- System Check List -->
+                        <div class="space-y-3 relative z-10 bg-black/20 p-4 rounded-lg border border-white/5">
+                            <div class="flex justify-between items-center text-xs font-mono text-gray-400 border-b border-white/5 pb-2">
+                                <span>视觉传感器</span>
+                                <span class="text-tech-success font-bold flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-tech-success animate-pulse"></div> 在线</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs font-mono text-gray-400 border-b border-white/5 pb-2">
+                                <span>语音输入模块</span>
+                                <span class="text-tech-success font-bold flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-tech-success animate-pulse"></div> 在线</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs font-mono text-gray-400">
+                                <span>神经计算引擎</span>
+                                <span class="text-tech-primary font-bold">待机</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Decoration Spinner -->
+                        <div class="absolute -bottom-24 -right-24 w-64 h-64 border border-tech-primary/5 rounded-full animate-spin-slow pointer-events-none"></div>
+                        <div class="absolute -bottom-20 -right-20 w-56 h-56 border border-dotted border-tech-primary/10 rounded-full animate-[spin_10s_linear_infinite_reverse] pointer-events-none"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-8 flex flex-col">
+                <!-- Quick Actions -->
+                <div class="cyber-panel panel-3d-top p-8 group relative">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    
+                    <h3 class="text-base font-bold text-gray-300 mb-6 font-mono tracking-widest border-b border-white/10 pb-3">快速操作</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <form action="/history" method="GET" class="contents">
+                            <button type="submit" class="flex flex-col items-center justify-center gap-3 bg-white/5 hover:bg-tech-primary/10 border border-white/10 hover:border-tech-primary/50 rounded-xl p-5 transition-all duration-200 group/item min-h-[120px]">
+                                <div class="w-10 h-10 bg-tech-primary/20 rounded-full flex items-center justify-center text-tech-primary group-hover/item:scale-110 transition-transform shadow-glow-cyan">
+                                    <i class="fas fa-history text-lg"></i>
+                                </div>
+                                <span class="font-bold text-gray-400 text-xs font-mono group-hover/item:text-white">查看测评历史</span>
+                            </button>
+                        </form>
+                        <button class="flex flex-col items-center justify-center gap-3 bg-white/5 hover:bg-tech-success/10 border border-white/10 hover:border-tech-success/50 rounded-xl p-5 transition-all duration-200 group/item min-h-[120px]">
+                            <div class="w-10 h-10 bg-tech-success/20 rounded-full flex items-center justify-center text-tech-success group-hover/item:scale-110 transition-transform shadow-[0_0_10px_rgba(5,255,161,0.3)]">
+                                <i class="fas fa-download text-lg"></i>
+                            </div>
+                            <span class="font-bold text-gray-400 text-xs font-mono group-hover/item:text-white">导出数据</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Daily Mood -->
+                <div class="cyber-panel panel-3d-top p-8 group relative flex-1 flex flex-col">
+                    <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                    <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                    
+                    <h3 class="text-base font-bold text-gray-300 mb-6 font-mono tracking-widest border-b border-white/10 pb-3">今日心情</h3>
+                    
+                    <div class="flex justify-between gap-4 flex-1 items-center mb-4">
+                        <button class="mood-btn flex-1 h-full min-h-[100px] bg-white/5 hover:bg-tech-success/20 border border-white/10 hover:border-tech-success rounded-xl flex flex-col items-center justify-center transition-all group/mood relative overflow-hidden">
+                            <div class="absolute inset-0 bg-tech-success/5 opacity-0 group-hover/mood:opacity-100 transition-opacity"></div>
+                            <span class="text-3xl mb-3 grayscale group-hover/mood:grayscale-0 transition-all transform group-hover/mood:scale-110">😊</span>
+                            <span class="text-xs text-gray-500 group-hover/mood:text-tech-success font-mono font-bold">不错</span>
+                        </button>
+                        <button class="mood-btn flex-1 h-full min-h-[100px] bg-white/5 hover:bg-tech-primary/20 border border-white/10 hover:border-tech-primary rounded-xl flex flex-col items-center justify-center transition-all group/mood relative overflow-hidden">
+                            <div class="absolute inset-0 bg-tech-primary/5 opacity-0 group-hover/mood:opacity-100 transition-opacity"></div>
+                            <span class="text-3xl mb-3 grayscale group-hover/mood:grayscale-0 transition-all transform group-hover/mood:scale-110">😐</span>
+                            <span class="text-xs text-gray-500 group-hover/mood:text-tech-primary font-mono font-bold">还行</span>
+                        </button>
+                        <button class="mood-btn flex-1 h-full min-h-[100px] bg-white/5 hover:bg-tech-secondary/20 border border-white/10 hover:border-tech-secondary rounded-xl flex flex-col items-center justify-center transition-all group/mood relative overflow-hidden">
+                            <div class="absolute inset-0 bg-tech-secondary/5 opacity-0 group-hover/mood:opacity-100 transition-opacity"></div>
+                            <span class="text-3xl mb-3 grayscale group-hover/mood:grayscale-0 transition-all transform group-hover/mood:scale-110">😢</span>
+                            <span class="text-xs text-gray-500 group-hover/mood:text-tech-secondary font-mono font-bold">不好</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Audio Viz Decoration -->
+                    <div class="flex items-end justify-center gap-1.5 h-8 mt-2 opacity-50">
+                        <div class="w-1.5 bg-tech-primary/50 h-3 animate-pulse"></div>
+                        <div class="w-1.5 bg-tech-primary/50 h-6 animate-pulse" style="animation-delay: 0.1s"></div>
+                        <div class="w-1.5 bg-tech-primary/50 h-4 animate-pulse" style="animation-delay: 0.2s"></div>
+                        <div class="w-1.5 bg-tech-primary/50 h-8 animate-pulse" style="animation-delay: 0.3s"></div>
+                        <div class="w-1.5 bg-tech-primary/50 h-4 animate-pulse" style="animation-delay: 0.2s"></div>
+                        <div class="w-1.5 bg-tech-primary/50 h-6 animate-pulse" style="animation-delay: 0.1s"></div>
+                        <div class="w-1.5 bg-tech-primary/50 h-3 animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Knowledge and Achievements Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
+            <!-- Mental Health Knowledge -->
+            <div class="cyber-panel panel-3d-top p-8 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-bold text-white flex items-center font-tech tracking-wider">
+                        <i class="fas fa-book-open text-tech-primary mr-3"></i> 心理健康知识库
+                    </h2>
+                    <span class="text-xs text-tech-primary border border-tech-primary/30 px-3 py-1 rounded bg-tech-primary/10">数据归档</span>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Item 1 -->
+                    <div class="bg-white/5 rounded-xl p-5 border border-white/5 hover:border-tech-primary/50 hover:bg-white/10 transition-all group/card">
+                        <h3 class="font-bold text-tech-primary mb-3 flex items-center text-base group-hover/card:text-white transition-colors">
+                            <i class="fas fa-brain mr-2 opacity-70"></i> 什么是抑郁症？
+                        </h3>
+                        <p class="text-gray-400 text-sm leading-relaxed line-clamp-3">
+                            抑郁症是一种常见的心理健康问题，主要表现为持续的情绪低落、兴趣减退和精力不足。它不是简单的心情不好，而是一种需要专业治疗的医学疾病。
+                        </p>
+                    </div>
+                    
+                    <!-- Item 2 -->
+                    <div class="bg-white/5 rounded-xl p-5 border border-white/5 hover:border-tech-success/50 hover:bg-white/10 transition-all group/card">
+                        <h3 class="font-bold text-tech-success mb-3 flex items-center text-base group-hover/card:text-white transition-colors">
+                            <i class="fas fa-heart mr-2 opacity-70"></i> 如何维护心理健康？
+                        </h3>
+                        <p class="text-gray-400 text-sm leading-relaxed line-clamp-3">
+                            规律作息、适量运动、保持社交互动是维护心理健康的基石。定期的自我监测和评估也是预防的重要手段。
+                        </p>
+                    </div>
+
+                    <!-- Item 3 -->
+                    <div class="bg-white/5 rounded-xl p-5 border border-white/5 hover:border-tech-secondary/50 hover:bg-white/10 transition-all group/card">
+                        <h3 class="font-bold text-tech-secondary mb-3 flex items-center text-base group-hover/card:text-white transition-colors">
+                            <i class="fas fa-phone mr-2 opacity-70"></i> 需要帮助时
+                        </h3>
+                        <p class="text-gray-400 text-sm leading-relaxed line-clamp-3">
+                            如果您感到持续的情绪困扰，请及时寻求专业帮助。心理咨询师和精神科医生都能为您提供有效的支持和治疗。
+                        </p>
+                    </div>
+
+                    <!-- Item 4 -->
+                    <div class="bg-white/5 rounded-xl p-5 border border-white/5 hover:border-tech-warning/50 hover:bg-white/10 transition-all group/card">
+                        <h3 class="font-bold text-tech-warning mb-3 flex items-center text-base group-hover/card:text-white transition-colors">
+                            <i class="fas fa-shield-alt mr-2 opacity-70"></i> 压力应对策略
+                        </h3>
+                        <p class="text-gray-400 text-sm leading-relaxed line-clamp-3">
+                            尝试深呼吸放松、进行时间管理规划、培养兴趣爱好。当压力过大时，及时倾诉和释放情绪至关重要。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Achievements -->
+            <div class="cyber-panel panel-3d-top p-8 group relative">
+                <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+                <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+                
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-bold text-white flex items-center font-tech tracking-wider">
+                        <i class="fas fa-trophy text-yellow-500 mr-3"></i> 我的成就系统
+                    </h2>
+                    <span class="text-xs text-yellow-500 border border-yellow-500/30 px-3 py-1 rounded bg-yellow-500/10">等级 {{ (count_inmonth // 3) + 1 }}</span>
+                </div>
+                
+                <div class="space-y-8">
+                     <!-- Health Points -->
+                    <div class="bg-gradient-to-r from-white/5 to-transparent rounded-xl p-6 border-l-4 border-tech-primary">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <p class="text-xs text-gray-400 font-mono tracking-widest mb-1">当前积分</p>
+                                <p class="text-4xl font-bold text-white font-tech">{{ count_inmonth * 10 + 50 }} <span class="text-sm text-tech-primary">分</span></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-400 font-mono tracking-widest mb-1">下一等级</p>
+                                <p class="text-base font-bold text-white font-mono">还需 {{ 3 - (count_inmonth % 3) }} 次测评升级</p>
+                            </div>
+                        </div>
+                        <!-- Fixed Progress Bar Syntax -->
+                        <div class="w-full bg-gray-800 rounded-full h-4 overflow-hidden border border-white/10 relative">
+                            {% set progress_percent = ((count_inmonth % 3) / 3 * 100)|int %}
+                            {% set progress_style = "width: " ~ progress_percent|string ~ "%" %}
+                            <div class="bg-gradient-to-r from-tech-primary to-blue-500 h-full rounded-full transition-all duration-1000 shadow-[0_0_15px_cyan] relative overflow-hidden" 
+                                 style="{{ progress_style }}">
+                                 <div class="absolute inset-0 bg-white/20 animate-[scan_2s_linear_infinite]"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Milestones -->
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-500 mb-4 font-mono tracking-widest">成就徽章</h3>
+                        <div class="grid grid-cols-3 gap-6">
+                            <!-- Medal 1 -->
+                            <div class="text-center group/medal relative p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-transparent hover:border-yellow-500/30">
+                                <div class="w-16 h-16 {% if count_inmonth >= 1 %}bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-yellow-400 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]{% else %}bg-gray-800 text-gray-600 border-gray-700{% endif %} rounded-full flex items-center justify-center mx-auto mb-3 border transition-all duration-300 group-hover/medal:scale-110 group-hover/medal:rotate-6">
+                                    <i class="fas fa-star text-2xl"></i>
+                                </div>
+                                <p class="text-xs font-mono font-bold text-gray-300">首次测评</p>
+                                {% if count_inmonth >= 1 %}<div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-tech-success rounded-full animate-pulse"></div>{% endif %}
+                            </div>
+                            <!-- Medal 2 -->
+                            <div class="text-center group/medal relative p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-transparent hover:border-yellow-500/30">
+                                <div class="w-16 h-16 {% if count_inmonth >= 5 %}bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-yellow-400 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]{% else %}bg-gray-800 text-gray-600 border-gray-700{% endif %} rounded-full flex items-center justify-center mx-auto mb-3 border transition-all duration-300 group-hover/medal:scale-110 group-hover/medal:rotate-6">
+                                    <i class="fas fa-fire text-2xl"></i>
+                                </div>
+                                <p class="text-xs font-mono font-bold text-gray-300">坚持达人</p>
+                                {% if count_inmonth >= 5 %}<div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-tech-success rounded-full animate-pulse"></div>{% endif %}
+                            </div>
+                            <!-- Medal 3 -->
+                            <div class="text-center group/medal relative p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-transparent hover:border-yellow-500/30">
+                                <div class="w-16 h-16 {% if count_inmonth >= 10 %}bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-yellow-400 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]{% else %}bg-gray-800 text-gray-600 border-gray-700{% endif %} rounded-full flex items-center justify-center mx-auto mb-3 border transition-all duration-300 group-hover/medal:scale-110 group-hover/medal:rotate-6">
+                                    <i class="fas fa-crown text-2xl"></i>
+                                </div>
+                                <p class="text-xs font-mono font-bold text-gray-300">健康守护者</p>
+                                {% if count_inmonth >= 10 %}<div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-tech-success rounded-full animate-pulse"></div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS -->
+    <script>
+        // Logout
+        const logoutBtn = document.getElementById('logoutBtn');
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('确定要退出登录吗？')) {
+                fetch('/logout', { method: 'GET' })
+                .then(r => {
+                    if (r.ok) window.location.href = '/login';
+                });
+            }
+        });
+
+        // Mood Buttons
+        const moodButtons = document.querySelectorAll('.mood-btn');
+        moodButtons.forEach((btn) => {
+            btn.addEventListener('click', function() {
+                moodButtons.forEach(b => {
+                    b.classList.remove('bg-white/20', 'border-white');
+                    b.classList.add('bg-white/5', 'border-white/10');
+                });
+                
+                this.classList.remove('bg-white/5', 'border-white/10');
+                this.classList.add('bg-white/20', 'border-white');
+                
+                // Tech Toast
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-20 right-6 bg-tech-panel border border-tech-primary text-tech-primary px-6 py-4 rounded-lg shadow-neon z-[100] font-mono text-sm flex items-center gap-3 animate-slide-up';
+                toast.innerHTML = '<i class="fas fa-check-circle"></i> 心情数据已记录';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            });
+        });
+    </script>
+</body>
+</html>

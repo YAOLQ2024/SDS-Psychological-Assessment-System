@@ -1,0 +1,133 @@
+# 表情识别配置文件
+# 昇腾NPU表情识别系统配置
+
+# NPU设备配置
+DEVICE:
+  # 设备ID，通常为0
+  DEVICE_ID: 0
+  # 设备类型：'npu' 或 'cpu'
+  DEVICE_TYPE: 'npu'
+  # NPU内存池大小 (MB)
+  MEMORY_POOL_SIZE: 512
+
+# 表情识别模型配置
+MODEL:
+  # 人脸检测模型路径
+  FACE_DETECTION_MODEL: './models/yolov8s.om'
+  # 表情识别模型路径
+  EMOTION_RECOGNITION_MODEL: './models/48model.om'
+  # 模型置信度阈值
+  CONFIDENCE_THRESHOLD: 0.4
+  # 输入图像大小
+  IMAGE_SIZE: 640
+  # 批处理大小
+  BATCH_SIZE: 1
+
+# 摄像头配置
+CAMERA:
+  # 摄像头设备ID
+  CAMERA_ID: 0
+  # 视频分辨率
+  VIDEO_WIDTH: 320
+  VIDEO_HEIGHT: 240
+  # 帧率
+  FPS: 15
+
+# 检测配置
+DETECTION:
+  # 检测间隔（毫秒）
+  DETECTION_INTERVAL: 3000
+  # 最大检测次数
+  MAX_DETECTIONS: 100
+  # 最小人脸尺寸
+  MIN_FACE_SIZE: 30
+  # 是否保存检测结果
+  SAVE_RESULTS: true
+
+# 表情类别配置
+EMOTIONS:
+  # 支持的表情类别
+  CLASSES:
+    angry: '愤怒'
+    disgust: '厌恶'
+    fear: '害怕'
+    happy: '高兴'
+    neutral: '自然'
+    sad: '悲伤'
+    surprised: '惊讶'
+  
+  # 颜色映射（用于可视化）
+  COLORS:
+    angry: '#FF4444'      # 红色
+    disgust: '#9C27B0'    # 紫色
+    fear: '#FF9800'       # 橙色
+    happy: '#4CAF50'      # 绿色
+    neutral: '#607D8B'    # 蓝灰色
+    sad: '#2196F3'        # 蓝色
+    surprised: '#FFEB3B'  # 黄色
+
+# 数据存储配置
+STORAGE:
+  # 是否保存检测历史
+  SAVE_HISTORY: true
+  # 历史数据保存路径
+  HISTORY_PATH: './logs/emotion_history'
+  # 是否保存图像
+  SAVE_IMAGES: false
+  # 图像保存路径
+  IMAGE_PATH: './logs/emotion_images'
+  # 数据保存格式：'json' 或 'csv'
+  DATA_FORMAT: 'json'
+
+# 日志配置
+LOGGING:
+  # 日志级别：'DEBUG', 'INFO', 'WARNING', 'ERROR'
+  LEVEL: 'INFO'
+  # 日志文件路径
+  LOG_FILE: './logs/emotion_recognition.log'
+  # 是否在控制台输出
+  CONSOLE_OUTPUT: true
+
+# 性能优化配置
+OPTIMIZATION:
+  # 是否使用多线程
+  USE_THREADING: true
+  # 线程数量
+  NUM_THREADS: 2
+  # 是否使用GPU加速（备用）
+  USE_GPU: false
+  # GPU设备ID
+  GPU_ID: 0
+
+# Web界面配置
+WEB_UI:
+  # 是否显示视频预览
+  SHOW_VIDEO: true
+  # 是否显示统计信息
+  SHOW_STATISTICS: true
+  # 统计更新间隔（毫秒）
+  STATS_UPDATE_INTERVAL: 1000
+  # 是否自动开始检测
+  AUTO_START: false
+
+# 集成配置
+INTEGRATION:
+  # 是否与问卷系统集成
+  ENABLE_QUESTIONNAIRE: true
+  # 问卷-表情关联分析
+  EMOTION_QUESTION_ANALYSIS: true
+  # 是否生成报告
+  GENERATE_REPORTS: true
+  # 报告格式：'html', 'pdf', 'json'
+  REPORT_FORMAT: 'html'
+
+# 摄像头自动检测配置
+CAMERA_AUTO_DETECT:
+  # 启用自动检测
+  ENABLED: true
+  # 尝试的摄像头ID列表
+  CAMERA_IDS: [0, 1, 2, 3]
+  # 自动检测超时（秒）
+  DETECT_TIMEOUT: 5
+  # 备用摄像头配置
+  FALLBACK_CAMERA_ID: -1

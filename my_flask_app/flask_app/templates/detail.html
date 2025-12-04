@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测评详情 - SDS 心理评估系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['"Noto Sans SC"', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                        'tech': ['"Orbitron"', 'sans-serif'],
+                        'hud': ['"Rajdhani"', 'sans-serif'],
+                    },
+                    colors: {
+                        tech: {
+                            bg: '#050b14', 
+                            panel: '#0f172a', 
+                            border: '#1e293b',
+                            primary: '#00f0ff', 
+                            secondary: '#d946ef', 
+                            success: '#05ffa1', 
+                            warning: '#f59e0b', 
+                            danger: '#ff2a6d', 
+                        }
+                    },
+                    backgroundImage: {
+                        'tech-pattern': "linear-gradient(rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.9)), linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)",
+                        'scan-line': "linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.05) 51%, transparent 51%)"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '0 100%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050b14;
+            color: #e2e8f0;
+            background-image: 
+                linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden; 
+            border-top: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-3d-top::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 1), transparent);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+            z-index: 20;
+        }
+        .panel-3d-top::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: radial-gradient(ellipse at center top, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cyber-panel:hover {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #00f0ff;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .c-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .c-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .c-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        .cyber-panel:hover .corner-bracket {
+            width: 12px;
+            height: 12px;
+            opacity: 1;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+        
+        .option-selected {
+            background: rgba(0, 240, 255, 0.1) !important;
+            border-color: #00f0ff !important;
+            color: #00f0ff !important;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #050b14; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-tech-primary selection:text-black pb-6">
+    
+    <!-- Background Scan Line -->
+    <div class="fixed inset-0 pointer-events-none opacity-10 bg-scan-line animate-scan z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="h-16 border-b border-tech-primary/20 bg-tech-panel/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="w-full max-w-[1920px] mx-auto h-full px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-6">
+                <form action="/history" method="GET" class="inline">
+                    <button type="submit" class="group flex items-center space-x-2 text-gray-400 hover:text-tech-primary transition-colors">
+                        <div class="w-8 h-8 flex items-center justify-center border border-gray-700 rounded group-hover:border-tech-primary group-hover:shadow-neon transition-all bg-black/40">
+                            <i class="fas fa-arrow-left text-xs"></i>
+                        </div>
+                        <span class="font-bold tracking-wider text-xs">返回历史记录</span>
+                    </button>
+                </form>
+                <div class="h-6 w-px bg-white/10"></div>
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-tech-primary to-tech-secondary rounded flex items-center justify-center shadow-neon">
+                        <i class="fas fa-file-alt text-white text-xs"></i>
+                    </div>
+                    <span class="text-xl font-bold font-tech text-white tracking-wider">测评详情</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                 <div class="text-xs font-mono text-gray-500">受测者: <span class="text-tech-primary">{{ user_name }}</span></div>
+                 <div class="w-8 h-8 rounded border border-tech-primary/30 flex items-center justify-center text-tech-primary bg-tech-primary/5 shadow-[0_0_5px_rgba(0,240,255,0.2)]">
+                    <i class="fas fa-wifi"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full max-w-[1920px] mx-auto px-6 py-8 relative z-10 flex flex-col gap-6">
+        
+        <!-- Result Overview -->
+        <div class="cyber-panel panel-3d-top p-8 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <div class="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+                <div>
+                    <h1 class="text-2xl font-bold text-white mb-1 font-tech tracking-wider">SDS 评估报告</h1>
+                    <p class="text-gray-500 text-xs font-mono">神经分析完成</p>
+                </div>
+                <div class="text-right font-mono">
+                    <div class="text-gray-400 text-xs">{{ test.finish_time }}</div>
+                    <div class="text-tech-primary text-xs">ID: #{{ test.id }}</div>
+                </div>
+            </div>
+
+            <!-- Result Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Status -->
+                <div class="bg-black/30 rounded-lg p-6 border border-white/5 flex flex-col items-center justify-center group/card hover:border-white/20 transition-all relative overflow-hidden">
+                    <div class="absolute inset-0 
+                        {% if test.result == '无抑郁' %}bg-tech-success/5{% elif test.result == '轻度抑郁' %}bg-tech-warning/5{% elif test.result == '中度抑郁' %}bg-orange-500/5{% elif test.result == '重度抑郁' %}bg-tech-danger/5{% endif %}">
+                    </div>
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 border 
+                        {% if test.result == '无抑郁' %}border-tech-success/30 bg-tech-success/10 text-tech-success shadow-[0_0_15px_rgba(5,255,161,0.3)]{% elif test.result == '轻度抑郁' %}border-tech-warning/30 bg-tech-warning/10 text-tech-warning shadow-[0_0_15px_rgba(245,158,11,0.3)]{% elif test.result == '中度抑郁' %}border-orange-500/30 bg-orange-500/10 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)]{% elif test.result == '重度抑郁' %}border-tech-danger/30 bg-tech-danger/10 text-tech-danger shadow-[0_0_15px_rgba(239,68,68,0.3)]{% else %}border-gray-500/30 bg-gray-500/10 text-gray-500{% endif %}">
+                        <i class="fas fa-heartbeat text-2xl animate-pulse-slow"></i>
+                    </div>
+                    <h3 class="text-xs font-mono text-gray-400 mb-1">状态</h3>
+                    <p class="text-xl font-bold font-tech tracking-wider 
+                        {% if test.result == '无抑郁' %}text-tech-success{% elif test.result == '轻度抑郁' %}text-tech-warning{% elif test.result == '中度抑郁' %}text-orange-500{% elif test.result == '重度抑郁' %}text-tech-danger{% else %}text-gray-400{% endif %}">
+                        {{ test.result }}
+                    </p>
+                </div>
+
+                <!-- Score -->
+                <div class="bg-black/30 rounded-lg p-6 border border-white/5 flex flex-col items-center justify-center hover:border-tech-primary/30 transition-all">
+                    <div class="w-16 h-16 bg-tech-primary/10 rounded-full flex items-center justify-center mb-4 border border-tech-primary/30 text-tech-primary shadow-glow-cyan">
+                        <i class="fas fa-star text-2xl"></i>
+                    </div>
+                    <h3 class="text-xs font-mono text-gray-400 mb-1">分数</h3>
+                    <p class="text-3xl font-bold text-white font-tech">{{ test.score }}</p>
+                    <p class="text-[10px] text-gray-500">最高: 100</p>
+                </div>
+
+                <!-- Time -->
+                <div class="bg-black/30 rounded-lg p-6 border border-white/5 flex flex-col items-center justify-center hover:border-tech-success/30 transition-all">
+                    <div class="w-16 h-16 bg-tech-success/10 rounded-full flex items-center justify-center mb-4 border border-tech-success/30 text-tech-success shadow-[0_0_15px_rgba(5,255,161,0.2)]">
+                        <i class="fas fa-clock text-2xl"></i>
+                    </div>
+                    <h3 class="text-xs font-mono text-gray-400 mb-1">用时</h3>
+                    <p class="text-3xl font-bold text-white font-tech">{{ test.use_time }}</p>
+                    <p class="text-[10px] text-gray-500">秒</p>
+                </div>
+
+                <!-- Completion -->
+                <div class="bg-black/30 rounded-lg p-6 border border-white/5 flex flex-col items-center justify-center hover:border-tech-secondary/30 transition-all">
+                    <div class="w-16 h-16 bg-tech-secondary/10 rounded-full flex items-center justify-center mb-4 border border-tech-secondary/30 text-tech-secondary shadow-[0_0_15px_rgba(217,70,239,0.2)]">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                    </div>
+                    <h3 class="text-xs font-mono text-gray-400 mb-1">完成度</h3>
+                    <p class="text-3xl font-bold text-white font-tech">100%</p>
+                    <p class="text-[10px] text-gray-500">全部 20 题</p>
+                </div>
+            </div>
+
+            <!-- AI Advice -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-6 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-tech-primary to-tech-secondary"></div>
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center font-tech tracking-wider">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                    AI 健康建议
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% if test.result == '无抑郁' %}
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">💚 状态极佳。保持当前积极的生活轨迹。</p>
+                    </div>
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">🏃‍♂️ 建议：继续保持规律的体育锻炼。</p>
+                    </div>
+                    {% elif test.result == '轻度抑郁' %}
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">💛 建议进行情绪调节。增加社交互动频率。</p>
+                    </div>
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">🧘‍♀️ 启动放松方案：冥想/深呼吸。</p>
+                    </div>
+                    {% elif test.result == '中度抑郁' %}
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">🧡 建议进行专业咨询。寻求专业支持。</p>
+                    </div>
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">👥 与信任的人分享指标以获得情感支持。</p>
+                    </div>
+                    {% elif test.result == '重度抑郁' %}
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">❤️ 紧急：需要立即进行专业医疗干预。</p>
+                    </div>
+                    <div class="bg-black/20 rounded p-4 border border-white/5">
+                        <p class="text-sm text-gray-300 font-mono">🏥 前往精神科机构进行全面评估。</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Record -->
+        <div class="cyber-panel panel-3d-top p-8 group relative">
+            <div class="corner-bracket c-tl"></div><div class="corner-bracket c-tr"></div>
+            <div class="corner-bracket c-bl"></div><div class="corner-bracket c-br"></div>
+            
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center font-tech tracking-wider">
+                <i class="fas fa-list-ul text-tech-primary mr-3"></i>
+                响应日志
+            </h2>
+            
+            <div class="space-y-4">
+                {% for item in result %}
+                <div class="bg-white/5 rounded-lg p-6 border border-white/5 hover:border-tech-primary/30 transition-all duration-200 group/item">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3 mb-4">
+                                <span class="w-8 h-8 bg-tech-primary/10 text-tech-primary rounded flex items-center justify-center text-sm font-bold font-mono border border-tech-primary/30">
+                                    {{ loop.index }}
+                                </span>
+                                <h3 class="text-sm font-medium text-gray-200">{{ item.question }}</h3>
+                            </div>
+                            
+                            <!-- Options -->
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 ml-11">
+                                <div class="p-3 rounded border {% if item.choose == '1' %}option-selected{% else %}border-white/10 bg-black/20 text-gray-500{% endif %} flex items-center space-x-2 transition-colors">
+                                    <span class="text-xs font-bold font-mono">A</span>
+                                    <span class="text-xs">没有或极少时间</span>
+                                </div>
+                                <div class="p-3 rounded border {% if item.choose == '2' %}option-selected{% else %}border-white/10 bg-black/20 text-gray-500{% endif %} flex items-center space-x-2 transition-colors">
+                                    <span class="text-xs font-bold font-mono">B</span>
+                                    <span class="text-xs">少部分时间</span>
+                                </div>
+                                <div class="p-3 rounded border {% if item.choose == '3' %}option-selected{% else %}border-white/10 bg-black/20 text-gray-500{% endif %} flex items-center space-x-2 transition-colors">
+                                    <span class="text-xs font-bold font-mono">C</span>
+                                    <span class="text-xs">相当多时间</span>
+                                </div>
+                                <div class="p-3 rounded border {% if item.choose == '4' %}option-selected{% else %}border-white/10 bg-black/20 text-gray-500{% endif %} flex items-center space-x-2 transition-colors">
+                                    <span class="text-xs font-bold font-mono">D</span>
+                                    <span class="text-xs">绝大部分或全部时间</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Value Indicator -->
+                        <div class="ml-4 text-center min-w-[3rem]">
+                            <div class="w-10 h-10 bg-white/5 rounded flex items-center justify-center mb-1 border border-white/10 group-hover/item:border-tech-primary/50 group-hover/item:text-tech-primary transition-all">
+                                <span class="text-lg font-bold font-mono">{{ item.choose }}</span>
+                            </div>
+                            <span class="text-[10px] text-gray-600 font-mono">值</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="flex justify-center space-x-4 mt-4 mb-8">
+            <form action="/SDS" method="GET" class="inline">
+                <button type="submit" class="flex items-center space-x-2 bg-tech-primary hover:bg-white text-black border border-tech-primary px-6 py-3 rounded font-bold transition-all shadow-neon hover:scale-105 font-tech">
+                    <i class="fas fa-redo"></i>
+                    <span>重新测评</span>
+                </button>
+            </form>
+            
+            <button onclick="window.print()" class="flex items-center space-x-2 bg-transparent hover:bg-white/10 text-tech-secondary border border-tech-secondary px-6 py-3 rounded font-bold transition-all hover:scale-105 font-tech">
+                <i class="fas fa-print"></i>
+                <span>打印报告</span>
+            </button>
+            
+            <form action="/history" method="GET" class="inline">
+                <button type="submit" class="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 px-6 py-3 rounded font-bold transition-all font-tech">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>返回</span>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        // Print Styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @media print {
+                body { 
+                    background: white !important; 
+                    color: black !important;
+                    -webkit-print-color-adjust: exact;
+                }
+                nav, button { display: none !important; }
+                .cyber-panel { 
+                    box-shadow: none !important; 
+                    border: 1px solid #ccc !important;
+                    background: white !important;
+                    color: black !important;
+                }
+                .text-white, .text-gray-200, .text-gray-300, .text-gray-400, .text-gray-500 {
+                    color: black !important;
+                }
+                .bg-white/5, .bg-black/20, .bg-black/30 {
+                    background: transparent !important;
+                    border: 1px solid #eee !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
